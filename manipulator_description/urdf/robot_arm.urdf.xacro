@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot name="manipulator_full" xmlns:xacro="http://ros.org/wiki/xacro">
+  
+  
+  <!-- Temporary anchor for isolated testing in GAZEBO -->
+  <!-- When installing on tracked base, this block needs to be removed! -->
+  <!-- <link name="world" />
+  <joint name="world_to_arm_fixed" type="fixed">
+    <parent link="world" />
+    <child link="arm_base_link" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint> -->
+  
+  <xacro:include filename="$(find manipulator_description)/urdf/manipulator.urdf.xacro" />
+  
+  <xacro:include filename="$(find manipulator_description)/urdf/gripper.urdf.xacro" />
+
+  <joint name="arm_flange_to_gripper" type="fixed">
+    <parent link="arm_tool0" />
+    <child link="arm_gripper_base" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+
+</robot>

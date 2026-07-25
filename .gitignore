@@ -1,0 +1,17 @@
+# VS Code
+.vscode/
+*.code-workspace
+
+# PlatformIO
+.pio/
+manipulator_firmware/.pio/
+
+# ROS 2 / Python
+build/
+install/
+log/
+__pycache__/
+*.pyc
+
+# OS generated files
+.DS_Store

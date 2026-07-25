@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<robot name="manipulator_full" xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <xacro:include filename="$(find manipulator_description)/urdf/robot_arm.urdf.xacro" />
+ 
+  <!-- Anchor for isolated testing in GAZEBO -->
+  <link name="world" />
+  <joint name="world_to_arm_fixed" type="fixed">
+    <parent link="world" />
+    <child link="arm_base_link" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+
+    
+    <!-- Плагин симуляции ТОЛЬКО для изолированной руки -->
+    <gazebo>
+        <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+            <parameters>$(find manipulator_moveit_config)/config/ros2_controllers.yaml</parameters>
+        </plugin>
+    </gazebo>
+    
+</robot>

@@ -1,0 +1,14 @@
+# === REQUEST ===
+string mode                  # "POSE" (точка-точка) или "CARTESIAN" (ровная линия)
+geometry_msgs/Pose[] poses   # Массив точек
+bool ignore_orientation      # Игнорировать углы кисти (для режима POSE)
+float64 speed                # Множитель скорости (0.01 - 1.0)
+float64 pos_tolerance        # Допуск по позиции в метрах (например, 0.05 = 5 см)
+float64 ori_tolerance        # Допуск по углам в радианах (например, 0.2)
+---
+# === RESULT ===
+bool success
+string message
+---
+# === FEEDBACK ===
+string state
