@@ -28,8 +28,10 @@ setup(
     entry_points={
         'console_scripts': [
             'tactical_server = manipulator_control.tactical_server:main',
+            'control_hub = manipulator_control.control_hub:main',
             'debug_moveit = manipulator_control.debug_moveit:main',
             'workspace_mapper = manipulator_control.workspace_mapper:main',
+            'teleop_manager = manipulator_control.teleop_manager:main',
         ],
     },
 )

@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Manipulator Teleop</title>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/eventemitter2@6.4.9/lib/eventemitter2.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/roslib@1.3.0/build/roslib.min.js"></script>
+    <style>
+        :root {
+            --bg-dark: #121212;
+            --panel-bg: #1e1e1e;
+            --accent: #00d2ff;
+            --accent-hover: #3a86ff;
+            --text-light: #e0e0e0;
+            --text-muted: #888;
+            --btn-bg: #2a2a2a;
+            --btn-active: #444;
+            --radius: 12px;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            max-width: 1400px;
+            width: 100%;
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            padding: 24px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border: var(--border);
+        }
+
+        h1, h2 {
+            margin-top: 0;
+            font-weight: 600;
+            background: linear-gradient(90deg, #fff, var(--text-muted));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        #status {
+            padding: 8px 12px;
+            border-radius: 6px;
+            background: rgba(255, 50, 50, 0.1);
+            color: #ff5252;
+            font-size: 0.9em;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+        #status.connected {
+            background: rgba(50, 255, 100, 0.1);
+            color: #4caf50;
+        }
+
+        .row-group {
+            margin-bottom: 24px;
+            background: rgba(0,0,0,0.2);
+            padding: 16px;
+            border-radius: var(--radius);
+            border: var(--border);
+        }
+
+        .axes-label {
+            display: block;
+            margin-bottom: 12px;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .control-pad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            justify-items: center;
+        }
+
+        .btn {
+            background: var(--btn-bg);
+            color: var(--text-light);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 14px 20px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 500;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .btn:hover:not(:disabled) {
+            background: var(--btn-active);
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+        .btn:active:not(:disabled) {
+            background: var(--accent);
+            color: #000;
+            transform: translateY(1px);
+        }
+        .btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        .btn.empty {
+            visibility: hidden;
+        }
+        
+        .joint-pad {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        input[type="range"] {
+            flex-grow: 1;
+            accent-color: var(--accent);
+        }
+
+        .telemetry-box {
+            background: #000;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.9em;
+            color: var(--accent);
+            white-space: pre-wrap;
+            margin-bottom: 20px;
+            min-height: 120px;
+        }
+
+        .hub-select {
+            width: 100%;
+            padding: 12px;
+            background: var(--btn-bg);
+            color: var(--text-light);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            font-size: 1em;
+            margin-bottom: 15px;
+            outline: none;
+        }
+
+        .progress-container {
+            width: 100%;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 15px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .progress-bar {
+            height: 20px;
+            width: 0%;
+            background: linear-gradient(90deg, #00d2ff, #3a86ff);
+            transition: width 0.3s ease;
+        }
+
+        .hub-status {
+            text-align: center;
+            font-size: 0.9em;
+            margin-top: 10px;
+            color: var(--text-light);
+            min-height: 20px;
+        }
+
+        .primary-btn {
+            background: linear-gradient(135deg, #00d2ff, #3a86ff);
+            color: white;
+            border: none;
+            font-weight: bold;
+        }
+        .primary-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, #3a86ff, #00d2ff);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Cartesian Control Panel -->
+        <div class="panel">
+            <h1>Teleop: Cartesian</h1>
+            <div id="status">Disconnected</div>
+            
+            <div class="row-group" style="margin-bottom: 2rem; background: rgba(0, 210, 255, 0.1); border-color: var(--accent);">
+                <span class="axes-label" style="color: var(--accent); font-weight: bold;">System Mode</span>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <label style="cursor: pointer; font-size: 1.1em; padding: 5px;">
+                        <input type="radio" name="modeSelect" value="MANUAL" checked onchange="setSystemMode('MANUAL')"> <b>MANUAL (Teleop)</b>
+                    </label>
+                    <label style="cursor: pointer; font-size: 1.1em; padding: 5px;">
+                        <input type="radio" name="modeSelect" value="AUTO" onchange="setSystemMode('AUTO')"> <b>AUTO (Hub)</b>
+                    </label>
+                </div>
+            </div>
+
+            <div class="slider-container">
+                <span class="axes-label" style="margin:0;">Speed</span>
+                <input type="range" id="speedSlider" min="1" max="100" value="50" oninput="updateSpeed()">
+                <span id="speedValue" style="width: 40px; text-align: right;">50%</span>
+            </div>
+
+            <div class="row-group" style="margin-bottom: 1rem;">
+                <span class="axes-label">Control Frame</span>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <label style="cursor: pointer;">
+                        <input type="radio" name="frameSelect" value="arm_base_link" checked> Base (Global)
+                    </label>
+                    <label style="cursor: pointer;">
+                        <input type="radio" name="frameSelect" value="arm_tool0"> Tool (Local)
+                    </label>
+                </div>
+            </div>
+
+            <div class="row-group">
+                <span class="axes-label">Translation X / Y</span>
+                <div class="control-pad">
+                    <div class="btn empty"></div>
+                    <button class="btn teleop-btn" onmousedown="pubTwist(1, 0, 0, 0, 0, 0)" onmouseup="stopTwist()" onmouseleave="stopTwist()">X+</button>
+                    <div class="btn empty"></div>
+                    
+                    <button class="btn teleop-btn" onmousedown="pubTwist(0, 1, 0, 0, 0, 0)" onmouseup="stopTwist()" onmouseleave="stopTwist()">Y+</button>
+                    <div class="btn empty"></div>
+                    <button class="btn teleop-btn" onmousedown="pubTwist(0, -1, 0, 0, 0, 0)" onmouseup="stopTwist()" onmouseleave="stopTwist()">Y-</button>
+                    
+                    <div class="btn empty"></div>
+                    <button class="btn teleop-btn" onmousedown="pubTwist(-1, 0, 0, 0, 0, 0)" onmouseup="stopTwist()" onmouseleave="stopTwist()">X-</button>
+                    <div class="btn empty"></div>
+                </div>
+            </div>
+
+            <div class="row-group">
+                <span class="axes-label">Translation Z</span>
+                <div class="control-pad" style="grid-template-columns: repeat(2, 1fr);">
+                    <button class="btn teleop-btn" onmousedown="pubTwist(0, 0, 1, 0, 0, 0)" onmouseup="stopTwist()" onmouseleave="stopTwist()">Z+</button>
+                    <button class="btn teleop-btn" onmousedown="pubTwist(0, 0, -1, 0, 0, 0)" onmouseup="stopTwist()" onmouseleave="stopTwist()">Z-</button>
+                </div>
+            </div>
+
+            <div class="row-group">
+                <span class="axes-label">Rotation (Roll / Pitch / Yaw)</span>
+                <div class="control-pad">
+                    <button class="btn teleop-btn" onmousedown="pubTwist(0, 0, 0, 1, 0, 0)" onmouseup="stopTwist()" onmouseleave="stopTwist()">R+</button>
+                    <button class="btn teleop-btn" onmousedown="pubTwist(0, 0, 0, 0, 1, 0)" onmouseup="stopTwist()" onmouseleave="stopTwist()">P+</button>
+                    <button class="btn teleop-btn" onmousedown="pubTwist(0, 0, 0, 0, 0, 1)" onmouseup="stopTwist()" onmouseleave="stopTwist()">Y+</button>
+                    
+                    <button class="btn teleop-btn" onmousedown="pubTwist(0, 0, 0, -1, 0, 0)" onmouseup="stopTwist()" onmouseleave="stopTwist()">R-</button>
+                    <button class="btn teleop-btn" onmousedown="pubTwist(0, 0, 0, 0, -1, 0)" onmouseup="stopTwist()" onmouseleave="stopTwist()">P-</button>
+                    <button class="btn teleop-btn" onmousedown="pubTwist(0, 0, 0, 0, 0, -1)" onmouseup="stopTwist()" onmouseleave="stopTwist()">Y-</button>
+                </div>
+            </div>
+            
+            <button class="btn teleop-btn" onclick="unfoldRobot()">Unfold Robot (Stand Pose)</button>
+        </div>
+
+        <!-- Joint Control & Telemetry Panel -->
+        <div class="panel">
+            <h2>Direct Joint Control</h2>
+            <div class="row-group">
+                <span class="axes-label">Target Position (Degrees)</span>
+                
+                <button class="btn" style="width:100%; margin-bottom:15px; background:#333;" onclick="syncSlidersToRobot()">🔄 Sync Sliders to Current Robot Pose</button>
+                
+                <div id="jointSliders">
+                    <!-- Sliders injected by JS -->
+                </div>
+                
+                <div style="margin-top:20px;">
+                    <div style="display:flex; gap: 10px; margin-bottom:15px;">
+                        <input type="number" id="executeDuration" value="3.0" step="0.5" style="width: 80px; padding:10px; border-radius:8px; border:1px solid #444; background:#111; color:#fff; text-align:center; font-size:1.1em;" title="Duration (sec)">
+                        <button class="btn primary-btn" style="flex:1; padding: 15px; font-size:1.2em;" onclick="executeJoints()">🚀 EXECUTE TRAJECTORY</button>
+                    </div>
+                    
+                    <div style="display:flex; gap: 10px; margin-bottom: 10px;">
+                        <input type="text" id="poseNameInput" placeholder="Pose name..." style="flex:1; padding:10px; border-radius:8px; border:1px solid #444; background:#111; color:#fff;">
+                        <button class="btn" style="background:#2a5a2a; border-color:#4caf50; flex:1;" onclick="savePose()">💾 Save Target Pose</button>
+                    </div>
+                    
+                    <div style="display:flex; gap: 10px;">
+                        <select id="savedPosesSelect" class="hub-select" style="margin-bottom:0; width:100%;" onchange="loadPoseToSliders()">
+                            <option value="">-- No poses saved --</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <h2>Telemetry</h2>
+            <div class="row-group">
+                <span class="axes-label">Tool Pose (Base Frame)</span>
+                <div class="telemetry-box" id="poseData">Waiting for data...</div>
+                
+                <span class="axes-label">Joint Angles (Degrees)</span>
+                <div class="telemetry-box" id="jointData">Waiting for data...</div>
+            </div>
+        </div>
+
+        <!-- Control Hub Panel -->
+        <div class="panel">
+            <h2>Control Hub (Auto)</h2>
+            <div class="row-group">
+                <span class="axes-label">Available Tasks</span>
+                <select id="hubTaskSelect" class="hub-select" disabled>
+                    <option value="csv_square">Draw Square (Horizontal CSV)</option>
+                    <option value="test_option">More tasks coming soon...</option>
+                </select>
+                
+                <button id="hubRunBtn" class="btn primary-btn" onclick="startHubTask()" disabled>
+                    ▶ START TASK
+                </button>
+
+                <div class="progress-container">
+                    <div id="hubProgressBar" class="progress-bar"></div>
+                </div>
+                <div id="hubStatusText" class="hub-status">Waiting for command...</div>
+            </div>
+            
+            <div class="row-group">
+                <span class="axes-label">Execution Logs</span>
+                <div class="telemetry-box" id="hubLogBox" style="font-size: 0.8em; color: #aaa;">
+                    [System] Control Hub initialized.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var ros = new ROSLIB.Ros({ url : 'ws://localhost:9090' });
+        var speedScale = 0.5;
+        var currentMode = 'MANUAL';
+
+        function updateSpeed() {
+            let val = document.getElementById('speedSlider').value;
+            speedScale = val / 100.0;
+            document.getElementById('speedValue').textContent = val + '%';
+        }
+
+        ros.on('connection', function() {
+            let status = document.getElementById('status');
+            status.textContent = 'Connected to ROS 2';
+            status.className = 'connected';
+            appendHubLog("Connected to ROS 2 websocket.");
+        });
+
+        ros.on('error', function(error) {
+            let status = document.getElementById('status');
+            status.textContent = 'Error connecting';
+            status.className = '';
+            appendHubLog("ERROR: Connection failed.");
+        });
+
+        ros.on('close', function() {
+            let status = document.getElementById('status');
+            status.textContent = 'Disconnected';
+            status.className = '';
+            appendHubLog("WARNING: Disconnected from ROS 2.");
+        });
+
+        var cmdVel = new ROSLIB.Topic({
+            ros : ros,
+            name : '/web_teleop/cmd_vel',
+            messageType : 'geometry_msgs/TwistStamped'
+        });
+
+        var cmdJog = new ROSLIB.Topic({
+            ros : ros,
+            name : '/web_teleop/cmd_jog',
+            messageType : 'control_msgs/JointJog'
+        });
+
+        var unfoldTopic = new ROSLIB.Topic({
+            ros : ros,
+            name : '/web_teleop/unfold',
+            messageType : 'std_msgs/Empty'
+        });
+
+        var modeTopic = new ROSLIB.Topic({
+            ros : ros,
+            name : '/web_teleop/mode',
+            messageType : 'std_msgs/String'
+        });
+
+        var hubReqTopic = new ROSLIB.Topic({
+            ros : ros,
+            name : '/web_teleop/hub_request',
+            messageType : 'std_msgs/String'
+        });
+
+        var hubStatusTopic = new ROSLIB.Topic({
+            ros : ros,
+            name : '/web_teleop/hub_status',
+            messageType : 'std_msgs/String'
+        });
+
+        hubStatusTopic.subscribe(function(msg) {
+            try {
+                let data = JSON.parse(msg.data);
+                document.getElementById('hubProgressBar').style.width = data.progress + '%';
+                document.getElementById('hubStatusText').textContent = data.state;
+                
+                if (data.done) {
+                    let btn = document.getElementById('hubRunBtn');
+                    if (data.success) {
+                        document.getElementById('hubProgressBar').style.background = "#4caf50";
+                        appendHubLog("SUCCESS: " + data.message);
+                    } else {
+                        document.getElementById('hubProgressBar').style.background = "#ff5252";
+                        appendHubLog("ERROR: " + data.message);
+                    }
+                    
+                    setTimeout(() => {
+                        btn.disabled = false;
+                        btn.textContent = "▶ START TASK";
+                        document.getElementById('hubProgressBar').style.width = '0%';
+                        document.getElementById('hubProgressBar').style.background = "linear-gradient(90deg, #00d2ff, #3a86ff)";
+                        document.getElementById('hubStatusText').textContent = "Waiting for command...";
+                    }, 3000);
+                }
+            } catch(e) {
+                console.error("Parse error", e);
+            }
+        });
+
+        function appendHubLog(msg) {
+            let logBox = document.getElementById('hubLogBox');
+            let time = new Date().toLocaleTimeString();
+            logBox.textContent += `\n[${time}] ${msg}`;
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        function setSystemMode(mode) {
+            currentMode = mode;
+            let msg = new ROSLIB.Message({ data: mode });
+            modeTopic.publish(msg);
+            
+            let isAuto = (mode === 'AUTO');
+            
+            // Toggle Teleop Buttons
+            let teleopBtns = document.querySelectorAll('.teleop-btn');
+            teleopBtns.forEach(btn => {
+                btn.disabled = isAuto;
+            });
+
+            // Toggle Hub Controls
+            document.getElementById('hubTaskSelect').disabled = !isAuto;
+            document.getElementById('hubRunBtn').disabled = !isAuto;
+            
+            if(isAuto) {
+                appendHubLog("Mode switched to AUTO. Hub unlocked.");
+            } else {
+                appendHubLog("Mode switched to MANUAL. Hub locked.");
+            }
+        }
+
+        function startHubTask() {
+            if(currentMode !== 'AUTO') return;
+            
+            let task = document.getElementById('hubTaskSelect').value;
+            if(task !== 'csv_square') {
+                appendHubLog("Task not implemented yet.");
+                return;
+            }
+
+            let btn = document.getElementById('hubRunBtn');
+            btn.disabled = true;
+            btn.textContent = "⏳ EXECUTING...";
+
+            let reqMsg = new ROSLIB.Message({
+                data: JSON.stringify({
+                    command: 'EXECUTE_CSV',
+                    file_path: '/home/oleksandr/ros2_ws/src/manipulator_stack/manipulator_control/manipulator_control/test/square_horizontal.csv'
+                })
+            });
+
+            appendHubLog("Sending command: " + task);
+            hubReqTopic.publish(reqMsg);
+        }
+
+        // Telemetry Topics
+        var poseSub = new ROSLIB.Topic({
+            ros : ros,
+            name : '/web_teleop/tool_pose',
+            messageType : 'geometry_msgs/PoseStamped'
+        });
+
+        var jointSub = new ROSLIB.Topic({
+            ros : ros,
+            name : '/joint_states',
+            messageType : 'sensor_msgs/JointState'
+        });
+
+        function eulerFromQuaternion(q) {
+            let sinr_cosp = 2 * (q.w * q.x + q.y * q.z);
+            let cosr_cosp = 1 - 2 * (q.x * q.x + q.y * q.y);
+            let roll = Math.atan2(sinr_cosp, cosr_cosp);
+
+            let sinp = 2 * (q.w * q.y - q.z * q.x);
+            let pitch;
+            if (Math.abs(sinp) >= 1)
+                pitch = Math.sign(sinp) * Math.PI / 2;
+            else
+                pitch = Math.asin(sinp);
+
+            let siny_cosp = 2 * (q.w * q.z + q.x * q.y);
+            let cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z);
+            let yaw = Math.atan2(siny_cosp, cosy_cosp);
+
+            return [roll, pitch, yaw];
+        }
+
+        poseSub.subscribe(function(msg) {
+            let pos = msg.pose.position;
+            let q = msg.pose.orientation;
+            let [r, p, y] = eulerFromQuaternion(q);
+            
+            let html = `X: ${(pos.x*1000).toFixed(1)} mm\n`;
+            html += `Y: ${(pos.y*1000).toFixed(1)} mm\n`;
+            html += `Z: ${(pos.z*1000).toFixed(1)} mm\n`;
+            html += `R: ${(r * 180/Math.PI).toFixed(1)}°\n`;
+            html += `P: ${(p * 180/Math.PI).toFixed(1)}°\n`;
+            html += `Y: ${(y * 180/Math.PI).toFixed(1)}°`;
+            
+            document.getElementById('poseData').textContent = html;
+        });
+
+        // ------------------------------------
+        // DIRECT JOINT CONTROL LOGIC
+        // ------------------------------------
+        
+        var directJointTrajTopic = new ROSLIB.Topic({
+            ros : ros,
+            name : '/arm_controller/joint_trajectory',
+            messageType : 'trajectory_msgs/JointTrajectory'
+        });
+
+        // Exact limits from manipulator.urdf.xacro (converted to degrees)
+        const jointLimits = [
+            {min: -90, max: 90},
+            {min: -5.0, max: 180},
+            {min: -180, max: 5.0},
+            {min: -90, max: 90},
+            {min: -90, max: 90},
+            {min: -90, max: 90}
+        ];
+
+        var currentJointAnglesRad = [0, 0, 0, 0, 0, 0];
+        var targetJointAnglesDeg = [0, 0, 0, 0, 0, 0];
+        var savedPoses = []; // Array of objects {name: "Stand", deg: [...]}
+
+        // Generate Sliders UI
+        function initSliders() {
+            let container = document.getElementById('jointSliders');
+            let html = '';
+            for(let i=0; i<6; i++) {
+                html += `
+                <div style="display:flex; align-items:center; gap: 10px; margin-bottom:10px;">
+                    <button class="btn teleop-btn" style="padding: 8px; width:45px;" onclick="stepJoint(${i}, -5)">-5°</button>
+                    <span style="width: 25px; text-align:center; font-weight:bold; color:var(--accent);">J${i}</span>
+                    <input type="range" id="slider_j${i}" min="${jointLimits[i].min}" max="${jointLimits[i].max}" value="0" step="0.5" style="flex-grow:1" 
+                           oninput="updateSliderText(${i})">
+                    <span id="text_j${i}" style="width: 50px; text-align:right; font-family:monospace;">0.0°</span>
+                    <button class="btn teleop-btn" style="padding: 8px; width:45px;" onclick="stepJoint(${i}, 5)">+5°</button>
+                </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        function updateSliderText(index) {
+            let val = parseFloat(document.getElementById(`slider_j${index}`).value);
+            targetJointAnglesDeg[index] = val;
+            document.getElementById(`text_j${index}`).textContent = val.toFixed(1) + '°';
+        }
+
+        function stepJoint(index, degStep) {
+            // CRITICAL FIX: Before stepping a single joint, we MUST sync our target 
+            // array to the exact REAL physical position of the robot.
+            // Otherwise, all other 5 joints will violently snap back to 0 (or their old target)!
+            for(let i=0; i<6; i++) {
+                targetJointAnglesDeg[i] = currentJointAnglesRad[i] * 180.0 / Math.PI;
+            }
+            
+            let targetDeg = targetJointAnglesDeg[index] + degStep;
+            
+            // Clamp to limits
+            if(targetDeg > jointLimits[index].max) targetDeg = jointLimits[index].max;
+            if(targetDeg < jointLimits[index].min) targetDeg = jointLimits[index].min;
+            
+            targetJointAnglesDeg[index] = targetDeg;
+            
+            // Update all sliders visually to match this new reality
+            for(let i=0; i<6; i++) {
+                let slider = document.getElementById(`slider_j${i}`);
+                if (slider) {
+                    slider.value = targetJointAnglesDeg[i];
+                    document.getElementById(`text_j${i}`).textContent = targetJointAnglesDeg[i].toFixed(1) + '°';
+                }
+            }
+            
+            // EXECUTE IMMEDIATELY FOR BUTTON CLICKS
+            executeJoints(true, 0.5);
+        }
+
+        function syncSlidersToRobot() {
+            for(let i=0; i<6; i++) {
+                let deg = currentJointAnglesRad[i] * 180.0 / Math.PI;
+                targetJointAnglesDeg[i] = deg;
+                
+                let slider = document.getElementById(`slider_j${i}`);
+                if (slider) {
+                    slider.value = deg;
+                    document.getElementById(`text_j${i}`).textContent = deg.toFixed(1) + '°';
+                }
+            }
+            alert("Sliders synchronized to current robot pose!");
+        }
+
+        function executeJoints(is_immediate=false, immediate_duration=0.5) {
+            if(currentMode !== 'MANUAL') {
+                alert("Please switch System Mode to MANUAL to use direct joint control.");
+                return;
+            }
+            
+            let d = 3.0;
+            if(is_immediate) {
+                d = immediate_duration;
+            } else {
+                d = parseFloat(document.getElementById('executeDuration').value) || 3.0;
+            }
+            
+            let targetRad = targetJointAnglesDeg.map(deg => deg * Math.PI / 180.0);
+            
+            let sec = Math.floor(d);
+            let nanosec = Math.floor((d % 1) * 1000000000);
+            
+            let msg = new ROSLIB.Message({
+                header: { stamp: {sec: 0, nanosec: 0}, frame_id: '' },
+                joint_names: ['arm_joint_0', 'arm_joint_1', 'arm_joint_2', 'arm_joint_3', 'arm_joint_4', 'arm_joint_5'],
+                points: [{
+                    positions: targetRad,
+                    velocities: [],
+                    accelerations: [],
+                    effort: [],
+                    time_from_start: { sec: sec, nanosec: nanosec }
+                }]
+            });
+            directJointTrajTopic.publish(msg);
+        }
+
+        function savePose() {
+            let name = document.getElementById('poseNameInput').value.trim();
+            if(!name) {
+                name = "Pose " + (savedPoses.length + 1);
+            }
+            
+            let poseObj = {
+                name: name,
+                deg: [...targetJointAnglesDeg]
+            };
+            
+            savedPoses.push(poseObj);
+            document.getElementById('poseNameInput').value = ""; // clear
+            
+            // Update Select Dropdown
+            let select = document.getElementById('savedPosesSelect');
+            if(savedPoses.length === 1) select.innerHTML = ""; // remove placeholder
+            
+            let opt = document.createElement('option');
+            opt.value = savedPoses.length - 1; // index
+            opt.textContent = name;
+            select.appendChild(opt);
+            
+            // Select the newly added item
+            select.value = opt.value;
+        }
+
+        function loadPoseToSliders() {
+            let select = document.getElementById('savedPosesSelect');
+            if(select.value === "") {
+                alert("No pose selected!");
+                return;
+            }
+            
+            let idx = parseInt(select.value);
+            let pose = savedPoses[idx];
+            
+            for(let i=0; i<6; i++) {
+                targetJointAnglesDeg[i] = pose.deg[i];
+                let slider = document.getElementById(`slider_j${i}`);
+                if (slider) {
+                    slider.value = pose.deg[i];
+                    document.getElementById(`text_j${i}`).textContent = pose.deg[i].toFixed(1) + '°';
+                }
+            }
+        }
+
+        // UPDATE TELEMETRY (but DO NOT overwrite sliders automatically)
+        jointSub.subscribe(function(msg) {
+            let html = '';
+            for(let i=0; i<msg.name.length; i++) {
+                if (msg.name[i].startsWith('arm_joint')) {
+                    // extract joint index (0 to 5)
+                    let idx = parseInt(msg.name[i].replace('arm_joint_', ''));
+                    let rad = msg.position[i];
+                    let deg = rad * 180.0 / Math.PI;
+                    
+                    // Update our internal state
+                    if(!isNaN(idx) && idx >= 0 && idx <= 5) {
+                        currentJointAnglesRad[idx] = rad;
+                    }
+                    html += `${msg.name[i]}: ${deg.toFixed(1)}°\n`;
+                }
+            }
+            if(html !== '') {
+                document.getElementById('jointData').textContent = html;
+            }
+        });
+
+        // ------------------------------------
+        // CARTESIAN CONTROL (TWIST) LOGIC
+        // ------------------------------------
+        function getSelectedFrame() {
+            return document.querySelector('input[name="frameSelect"]:checked').value;
+        }
+
+        function pubTwist(lx, ly, lz, ax, ay, az) {
+            if(currentMode !== 'MANUAL') return;
+            let msg = new ROSLIB.Message({
+                header: { frame_id: getSelectedFrame() },
+                twist: {
+                    linear : { x : lx * speedScale, y : ly * speedScale, z : lz * speedScale },
+                    angular : { x : ax * speedScale, y : ay * speedScale, z : az * speedScale }
+                }
+            });
+            cmdVel.publish(msg);
+        }
+
+        function stopTwist() {
+            let msg = new ROSLIB.Message({
+                header: { frame_id: getSelectedFrame() },
+                twist: {
+                    linear: { x: 0, y: 0, z: 0 },
+                    angular: { x: 0, y: 0, z: 0 }
+                }
+            });
+            cmdVel.publish(msg);
+        }
+
+        function unfoldRobot() {
+            if(currentMode !== 'MANUAL') return;
+            unfoldTopic.publish(new ROSLIB.Message({}));
+        }
+
+        // ------------------------------------
+        // Init state
+        // ------------------------------------
+        initSliders();
+        setSystemMode('MANUAL');
+    </script>
+</body>
+</html>

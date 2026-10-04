@@ -1,0 +1,63 @@
+###############################################
+# Modify all parameters related to servoing here
+###############################################
+use_gazebo: false # Whether the robot is started in a Gazebo simulation environment
+
+## Properties of incoming commands
+command_in_type: "unitless" # "unitless"> in the range [-1:1], as if from joystick. "speed_units"> cmds are in m/s and rad/s
+scale:
+  # Scale parameters are only used if command_in_type=="unitless"
+  linear:  1.0  # Max linear velocity. Meters per publish_period. Units is [m/s].
+  rotational:  3.14 # Max angular velocity. Rads per publish_period. Units is [rad/s].
+  # Max joint angular/linear velocity. Rads or Meters per publish period.
+  joint: 3.14
+
+## Properties of outgoing commands
+publish_period: 0.02  # 1/Nominal publish rate [seconds]
+low_latency_mode: false # Set this to true to publish as soon as an incoming Twist command is received
+
+command_out_type: trajectory_msgs/JointTrajectory # What topic should we publish to? "trajectory_msgs/JointTrajectory" or "std_msgs/Float64MultiArray"
+publish_joint_positions: true
+publish_joint_velocities: true
+publish_joint_accelerations: false
+
+## Plugins for smoothing outgoing commands
+use_smoothing: true
+smoothing_filter_plugin_name: "online_signal_smoothing::ButterworthFilterPlugin"
+
+# If is_primary_planning_scene_monitor is set to true, the Servo server's PlanningScene mismatches
+# the Scene of the planning node and is essentially independent.
+is_primary_planning_scene_monitor: false
+
+## MoveIt properties
+move_group_name: arm
+robot_link_command_frame: arm_tool0
+ee_frame_name: arm_tool0
+
+## Stopping behaviour
+incoming_command_timeout: 0.1  # Stop servoing if X seconds elapse without a new command
+num_outgoing_halt_msgs_to_publish: 4
+
+## Configure handling of singularities and joint limits
+lower_singularity_threshold: 100000.0  # Start decelerating when the condition number hits this (close to singularity)
+hard_stop_singularity_threshold: 150000.0 # Stop when the condition number hits this
+joint_limit_margins: [0.02, 0.02, 0.02, 0.02, 0.02, 0.02]
+leaving_singularity_threshold_multiplier: 2.0
+
+## Relax orientation constraints to allow freer movement
+drift_dimensions: [false, false, false, true, true, true] # Allow Roll, Pitch, Yaw to drift
+
+## Topic names
+cartesian_command_in_topic: ~/delta_twist_cmds  # Topic for incoming Cartesian twist commands
+joint_command_in_topic: ~/delta_joint_cmds # Topic for incoming joint angle commands
+joint_topic: /joint_states
+status_topic: ~/status # Publish status to this topic
+command_out_topic: /arm_controller/joint_trajectory # Publish outgoing commands here
+
+## Collision checking for the entire robot body
+check_collisions: true
+collision_check_rate: 10.0 # [Hz] Collision-checking can easily bog down a CPU if done too often.
+check_octomap_collisions: false
+collision_check_type: threshold_distance
+self_collision_proximity_threshold: 0.01
+scene_collision_proximity_threshold: 0.02

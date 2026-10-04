@@ -1,0 +1,11 @@
+# === REQUEST ===
+string command         # e.g., "EXECUTE_CSV", "GO_HOME"
+string file_path       # e.g., "/path/to/square.csv"
+---
+# === RESULT ===
+bool success
+string message
+---
+# === FEEDBACK ===
+string current_state
+int32 progress

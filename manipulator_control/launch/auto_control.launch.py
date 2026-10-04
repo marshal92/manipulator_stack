@@ -8,7 +8,7 @@ def generate_launch_description():
     tactical_server_node = Node(
         package="manipulator_control",
         executable="tactical_server",
-        name="tactical_server", # Имя совпадает с node_name в MoveItPy
+        name="tactical_server", 
         output="screen",
         parameters=[
             moveit_config.to_dict(), 
@@ -16,4 +16,12 @@ def generate_launch_description():
         ],
     )
 
-    return LaunchDescription([tactical_server_node])
+    control_hub_node = Node(
+        package="manipulator_control",
+        executable="control_hub",
+        name="control_hub",
+        output="screen",
+        parameters=[{'use_sim_time': True}]
+    )
+
+    return LaunchDescription([tactical_server_node, control_hub_node])
