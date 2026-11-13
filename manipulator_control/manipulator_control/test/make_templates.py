@@ -22,15 +22,14 @@ def generate_square(filename, center_x, center_y, center_z, size_m, plane='XY', 
             (center_x - half, center_y - half, center_z), # Левый дальний
             (center_x - half, center_y + half, center_z)  # Возврат
         ]
-    elif plane == 'XZ':
-        # Вертикальный квадрат (стена перед роботом)
-        # Y не меняется
+    elif plane == 'YZ':
+        # Вертикальный квадрат прямо перед роботом (+X)
         corners = [
-            (center_x - half, center_y, center_z + half), # Левый верхний
-            (center_x + half, center_y, center_z + half), # Правый верхний
-            (center_x + half, center_y, center_z - half), # Правый нижний
-            (center_x - half, center_y, center_z - half), # Левый нижний
-            (center_x - half, center_y, center_z + half)  # Возврат
+            (center_x, center_y - half, center_z + half),
+            (center_x, center_y + half, center_z + half),
+            (center_x, center_y + half, center_z - half),
+            (center_x, center_y - half, center_z - half),
+            (center_x, center_y - half, center_z + half)
         ]
     else:
         return
@@ -66,9 +65,9 @@ def generate_square(filename, center_x, center_y, center_z, size_m, plane='XY', 
 
 if __name__ == '__main__':
     # ТЕСТ 1: Горизонтальный квадрат на высоте 10см (Z=0.1)
-    # Центр находится в 30см прямо перед роботом (Y = -0.30)
-    generate_square('square_horizontal.csv', center_x=0.0, center_y=-0.30, center_z=0.1, size_m=0.15, plane='XY')
+    # Центр находится в 30см прямо перед роботом (+X = 0.30)
+    generate_square('square_horizontal.csv', center_x=0.30, center_y=0.0, center_z=0.10, size_m=0.15, plane='XY')
 
-    # ТЕСТ 2: Вертикальный квадрат на высоте 20см (Z=0.2)
-    # Центр находится в 35см прямо перед роботом (Y = -0.35)
-    generate_square('square_vertical.csv', center_x=0.0, center_y=-0.35, center_z=0.2, size_m=0.15, plane='XZ')
+    # ТЕСТ 2: Вертикальный квадрат на высоте 25см (Z=0.25)
+    # Центр находится в 30см прямо перед роботом (+X = 0.30)
+    generate_square('square_vertical.csv', center_x=0.30, center_y=0.0, center_z=0.25, size_m=0.15, plane='YZ')

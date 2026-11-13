@@ -354,7 +354,8 @@
     </div>
 
     <script>
-        var ros = new ROSLIB.Ros({ url : 'ws://localhost:9090' });
+        var rosUrl = 'ws://' + (window.location.hostname || 'localhost') + ':9090';
+        var ros = new ROSLIB.Ros({ url : rosUrl });
         var speedScale = 0.5;
         var currentMode = 'MANUAL';
 
@@ -497,7 +498,8 @@
             let reqMsg = new ROSLIB.Message({
                 data: JSON.stringify({
                     command: 'EXECUTE_CSV',
-                    file_path: '/home/oleksandr/ros2_ws/src/manipulator_stack/manipulator_control/manipulator_control/test/square_horizontal.csv'
+                    file_path: '/home/oleksandr/ros2_ws/src/manipulator_stack/manipulator_control/manipulator_control/test/square_horizontal.csv',
+                    speed: speedScale
                 })
             });
 

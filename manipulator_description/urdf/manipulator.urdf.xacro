@@ -401,7 +401,7 @@
     <joint name="arm_flange_joint" type="fixed">
     <parent link="arm_link_5" />
     <child link="arm_tool0" />
-    <origin xyz="0 0 0" rpy="0 0 0" /> 
+    <origin xyz="0.073 0 0" rpy="0 0 0" />
   </joint>
 
   <!-- ВИРТУАЛЬНЫЕ МОТОРЫ ДЛЯ GAZEBO -->

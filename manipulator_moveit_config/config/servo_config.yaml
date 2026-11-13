@@ -39,7 +39,7 @@ incoming_command_timeout: 0.1  # Stop servoing if X seconds elapse without a new
 num_outgoing_halt_msgs_to_publish: 4
 
 ## Configure handling of singularities and joint limits
-lower_singularity_threshold: 100000.0  # Start decelerating when the condition number hits this (close to singularity)
+lower_singularity_threshold: 100000.0  # Start decelerating when the condition number hits this
 hard_stop_singularity_threshold: 150000.0 # Stop when the condition number hits this
 joint_limit_margins: [0.02, 0.02, 0.02, 0.02, 0.02, 0.02]
 leaving_singularity_threshold_multiplier: 2.0

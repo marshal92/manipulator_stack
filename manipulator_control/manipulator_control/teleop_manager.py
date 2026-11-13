@@ -27,6 +27,7 @@ class TeleopManager(Node):
         self.web_twist_sub = self.create_subscription(TwistStamped, '/web_teleop/cmd_vel', self.cmd_vel_callback, 10)
         self.web_jog_sub = self.create_subscription(JointJog, '/web_teleop/cmd_jog', self.cmd_jog_callback, 10)
         self.unfold_sub = self.create_subscription(Empty, '/web_teleop/unfold', self.unfold_callback, 10)
+        self.fold_sub = self.create_subscription(Empty, '/web_teleop/fold', self.fold_callback, 10)
         
         from std_msgs.msg import String
         self.mode_sub = self.create_subscription(String, '/web_teleop/mode', self.mode_callback, 10)
@@ -190,12 +191,23 @@ class TeleopManager(Node):
             self.request_mode_switch('JOINT_JOG')
 
     def unfold_callback(self, msg: Empty):
-        self.get_logger().info("Unfolding robot to 'stand' pose...")
+        self.get_logger().info("Unfolding robot to 'stand' pose (J4 = -45 deg)...")
         traj = JointTrajectory()
         traj.header.stamp = self.get_clock().now().to_msg()
         traj.joint_names = ['arm_joint_0', 'arm_joint_1', 'arm_joint_2', 'arm_joint_3', 'arm_joint_4', 'arm_joint_5']
         point = JointTrajectoryPoint()
-        point.positions = [0.0, 1.0, -1.0, 0.0, 0.785, 0.0]
+        point.positions = [0.0, 1.0, -1.0, 0.0, -0.785398, 0.0]
+        point.time_from_start = Duration(sec=3, nanosec=0)
+        traj.points.append(point)
+        self.traj_pub.publish(traj)
+
+    def fold_callback(self, msg: Empty):
+        self.get_logger().info("Folding robot to 'home' pose (all 0)...")
+        traj = JointTrajectory()
+        traj.header.stamp = self.get_clock().now().to_msg()
+        traj.joint_names = ['arm_joint_0', 'arm_joint_1', 'arm_joint_2', 'arm_joint_3', 'arm_joint_4', 'arm_joint_5']
+        point = JointTrajectoryPoint()
+        point.positions = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         point.time_from_start = Duration(sec=3, nanosec=0)
         traj.points.append(point)
         self.traj_pub.publish(traj)
@@ -209,7 +221,8 @@ def main(args=None):
         pass
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 if __name__ == '__main__':
     main()

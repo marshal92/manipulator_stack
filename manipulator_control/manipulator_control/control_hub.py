@@ -170,36 +170,45 @@ class ControlHub(Node):
         self.web_status_pub.publish(msg)
 
     def web_cmd_callback(self, msg):
-        if self.is_executing:
-            self.publish_web_status("Ошибка: Хаб занят", 0, False, "Другая задача уже выполняется")
-            return
-            
         try:
             req = json.loads(msg.data)
             cmd = req.get("command")
             file_path = req.get("file_path")
+            speed = float(req.get("speed", 0.3))
+            
+            if cmd in ["RESET", "STOP", "CANCEL"]:
+                self.is_executing = False
+                self.publish_web_status("Готов (Сброшено)", 0, True, "Задача сброшена")
+                return
+
+            if self.is_executing:
+                self.publish_web_status("Ошибка: Хаб занят", 0, False, "Другая задача уже выполняется")
+                return
             
             if cmd == "EXECUTE_CSV":
-                threading.Thread(target=self.execute_csv_task_web, args=(file_path,)).start()
+                threading.Thread(target=self.execute_csv_task_web, args=(file_path, speed)).start()
             else:
                 self.publish_web_status("Ошибка", 0, False, "Неизвестная команда")
         except Exception as e:
             self.publish_web_status("Ошибка парсинга", 0, False, str(e))
 
-    def execute_csv_task_web(self, csv_path):
+    def execute_csv_task_web(self, csv_path, speed=0.3):
         self.is_executing = True
-        
-        def update_status(state, prog):
-            self.publish_web_status(state, prog)
+        try:
+            def update_status(state, prog):
+                self.publish_web_status(state, prog)
+                
+            success, msg = self._run_csv_logic(csv_path, update_status, speed=speed)
             
-        success, msg = self._run_csv_logic(csv_path, update_status)
-        
-        if success:
-            self.publish_web_status("Успех", 100, True, msg)
-        else:
-            self.publish_web_status("Ошибка", 100, False, msg)
-            
-        self.is_executing = False
+            if success:
+                self.publish_web_status("Успех", 100, True, msg)
+            else:
+                self.publish_web_status("Ошибка", 100, False, msg)
+        except Exception as e:
+            self.get_logger().error(f"Exception in execute_csv_task_web: {e}")
+            self.publish_web_status("Ошибка", 100, False, str(e))
+        finally:
+            self.is_executing = False
 
     # ==========================================
     # ACTION SERVER (Terminal / ROS)
@@ -220,34 +229,40 @@ class ControlHub(Node):
         feedback = HubCommand.Feedback()
         result = HubCommand.Result()
         
-        if req.command == "EXECUTE_CSV":
-            def update_status(state, prog):
-                feedback.current_state = state
-                feedback.progress = prog
-                goal_handle.publish_feedback(feedback)
+        try:
+            if req.command == "EXECUTE_CSV":
+                def update_status(state, prog):
+                    feedback.current_state = state
+                    feedback.progress = prog
+                    goal_handle.publish_feedback(feedback)
+                    
+                success, msg = self._run_csv_logic(req.file_path, update_status)
                 
-            success, msg = self._run_csv_logic(req.file_path, update_status)
-            
-            if success:
-                goal_handle.succeed()
-                result.success = True
-                result.message = msg
+                if success:
+                    goal_handle.succeed()
+                    result.success = True
+                    result.message = msg
+                else:
+                    goal_handle.abort()
+                    result.success = False
+                    result.message = msg
             else:
                 goal_handle.abort()
                 result.success = False
-                result.message = msg
-        else:
+                result.message = "Неизвестная команда"
+        except Exception as e:
+            self.get_logger().error(f"Exception in execute_callback: {e}")
             goal_handle.abort()
             result.success = False
-            result.message = "Неизвестная команда"
-            
-        self.is_executing = False
+            result.message = str(e)
+        finally:
+            self.is_executing = False
         return result
 
     # ==========================================
     # CORE LOGIC
     # ==========================================
-    def _run_csv_logic(self, csv_path, status_cb):
+    def _run_csv_logic(self, csv_path, status_cb, speed=0.3):
         status_cb("Чтение файла...", 10)
         
         if not os.path.exists(csv_path):
@@ -284,6 +299,12 @@ class ControlHub(Node):
         valid_poses = None
         best_angle = 0.0
 
+        self.get_logger().info(
+            f"📍 Текущая поза arm_tool0: X={current_pose.position.x:.3f}, "
+            f"Y={current_pose.position.y:.3f}, Z={current_pose.position.z:.3f} | "
+            f"Первая точка CSV: X={raw_points[0][0]:.3f}, Y={raw_points[0][1]:.3f}, Z={raw_points[0][2]:.3f}"
+        )
+
         for angle in variations:
             self.get_logger().info(f'🔎 Пробуем построить цепь (доворот кисти {angle:.2f} рад)...')
             test_q = rotate_q_z(base_q, angle)
@@ -297,6 +318,7 @@ class ControlHub(Node):
                 pose, joints = self.get_ik_for_point(pt[0], pt[1], pt[2], target_q=chain_q, seed_joints=chain_joints)
                 
                 if not pose:
+                    self.get_logger().info(f"   ↳ Отказ IK на точке #{i+1}/{len(raw_points)}: ({pt[0]:.3f}, {pt[1]:.3f}, {pt[2]:.3f})")
                     success_ik = False
                     break
                     
@@ -315,7 +337,8 @@ class ControlHub(Node):
 
         status_cb("Выполнение: Подлет к старту...", 40)
 
-        success_move = self.send_goal_and_wait(mode="POSE", poses=[valid_poses[0]], ignore_ori=False, speed=0.8, pos_tol=0.05, ori_tol=0.2)
+        approach_speed = min(1.0, max(0.05, speed * 1.5))
+        success_move = self.send_goal_and_wait(mode="POSE", poses=[valid_poses[0]], ignore_ori=False, speed=approach_speed, pos_tol=0.05, ori_tol=0.2)
         if not success_move:
             self.get_logger().error('Не смогли доехать до первой точки!')
             return False, "Сбой подлета"
@@ -324,7 +347,7 @@ class ControlHub(Node):
         
         status_cb("Выполнение: Отрисовка пути...", 60)
 
-        success_draw = self.send_goal_and_wait(mode="CARTESIAN", poses=valid_poses, ignore_ori=False, speed=0.3, pos_tol=0.05, ori_tol=0.2)
+        success_draw = self.send_goal_and_wait(mode="CARTESIAN", poses=valid_poses, ignore_ori=False, speed=speed, pos_tol=0.05, ori_tol=0.2)
         
         if success_draw:
             self.get_logger().info('🎯 ФИГУРА ИДЕАЛЬНО ОТРИСОВАНА!')
@@ -342,7 +365,8 @@ def main(args=None):
         pass
     finally:
         hub.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 if __name__ == '__main__':
     main()
