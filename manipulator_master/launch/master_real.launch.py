@@ -54,6 +54,7 @@ def generate_launch_description():
         output='screen',
         parameters=[{
             'use_sim_time': False,
+            'rate': 30,
             'source_list': ['/arm_joint_states']
         }]
     )

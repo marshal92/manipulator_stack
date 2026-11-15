@@ -6,7 +6,8 @@
       <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001" />
     </inertial>
     <visual>
-      <origin xyz="0 0 0" rpy="0 0 0" />
+      <!-- Align parallel gripper mount face (Z_max=0.1007) to arm_link_5 flange (x=0.0125), jaws pointing +X -->
+      <origin xyz="0.1132 -0.0383 -0.04605" rpy="0 -1.5708 0" />
       <geometry>
         <mesh filename="package://manipulator_description/meshes/visual/gripper.STL" />
       </geometry>

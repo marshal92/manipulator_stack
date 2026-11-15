@@ -1,3 +1,4 @@
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <memory>
@@ -5,6 +6,7 @@
 #include <string>
 #include <thread>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "rclcpp/rclcpp.hpp"
@@ -71,21 +73,41 @@ private:
   void send_point_to_esp32(
     const std::vector<std::string> & joint_names,
     const trajectory_msgs::msg::JointTrajectoryPoint & point,
-    float duration)
+    float duration,
+    bool filter_unchanged = false)
   {
     const size_t count = std::min(joint_names.size(), point.positions.size());
-    for (size_t i = 0; i < count; ++i) {
-      auto it = joint_map_.find(joint_names[i]);
-      if (it != joint_map_.end()) {
-        std_msgs::msg::Float32MultiArray cmd_msg;
-        cmd_msg.data = {
-          it->second,
-          static_cast<float>(point.positions[i]),
-          0.0f,
-          duration
-        };
-        servo_pub_->publish(cmd_msg);
+    std::vector<std::pair<float, float>> to_publish;
+    to_publish.reserve(count);
+
+    {
+      std::lock_guard<std::mutex> lock(state_mutex_);
+      for (size_t i = 0; i < count; ++i) {
+        auto it = joint_map_.find(joint_names[i]);
+        if (it == joint_map_.end()) {
+          continue;
+        }
+        const size_t jidx = static_cast<size_t>(it->second);
+        const double pos = point.positions[i];
+        if (jidx < last_sent_pos_.size()) {
+          // Only skip unchanged joints during rapid streaming (servo / manual jog);
+          // full trajectories (AUTO / Unfold / sliders) always dispatch every joint.
+          if (filter_unchanged && has_last_sent_[jidx] &&
+              std::abs(pos - last_sent_pos_[jidx]) < 0.001)
+          {
+            continue;
+          }
+          last_sent_pos_[jidx] = pos;
+          has_last_sent_[jidx] = true;
+        }
+        to_publish.emplace_back(it->second, static_cast<float>(pos));
       }
+    }
+
+    for (const auto & item : to_publish) {
+      std_msgs::msg::Float32MultiArray cmd_msg;
+      cmd_msg.data = {item.first, item.second, 0.0f, duration};
+      servo_pub_->publish(cmd_msg);
     }
   }
 
@@ -95,13 +117,30 @@ private:
       return;
     }
 
-    // Single-point command (Web UI sliders, Unfold, moveit_servo) — dispatch immediately
+    // Single-point command (Web UI sliders, Unfold, Manual 2.5D jog, moveit_servo)
     if (msg->points.size() == 1) {
       const auto & pt = msg->points[0];
       double t = static_cast<double>(pt.time_from_start.sec) +
                  static_cast<double>(pt.time_from_start.nanosec) * 1e-9;
-      float duration = static_cast<float>(t > 0.02 ? t : 0.05);
-      send_point_to_esp32(msg->joint_names, pt, duration);
+
+      // Rapid streaming updates (<= 0.25s, e.g. Manual jog 20 Hz or MoveIt Servo 50 Hz):
+      // cap rate at <= 25 Hz (40 ms) and skip unchanged joints so 115200 baud Serial isn't saturated.
+      if (t <= 0.25) {
+        const auto now = std::chrono::steady_clock::now();
+        {
+          std::lock_guard<std::mutex> lock(state_mutex_);
+          if (now - last_stream_time_ < 40ms) {
+            return;
+          }
+          last_stream_time_ = now;
+        }
+        float duration = static_cast<float>(t > 0.02 ? t : 0.08);
+        send_point_to_esp32(msg->joint_names, pt, duration, true);
+        return;
+      }
+
+      // One-shot commands (stepJoint 0.5s, Unfold / sliders 3.0s) dispatch immediately without filtering
+      send_point_to_esp32(msg->joint_names, pt, static_cast<float>(t), false);
       return;
     }
 
@@ -144,6 +183,11 @@ private:
   void execute_action(const std::shared_ptr<GoalHandleFJT> goal_handle)
   {
     RCLCPP_INFO(this->get_logger(), "Executing trajectory from MoveIt...");
+    {
+      std::lock_guard<std::mutex> lock(state_mutex_);
+      has_last_sent_.fill(false);
+      last_stream_time_ = std::chrono::steady_clock::time_point{};
+    }
     const auto & trajectory = goal_handle->get_goal()->trajectory;
     auto result = std::make_shared<FollowJointTrajectory::Result>();
 
@@ -189,6 +233,10 @@ private:
   }
 
   std::unordered_map<std::string, float> joint_map_;
+  std::mutex state_mutex_;
+  std::array<double, 7> last_sent_pos_{};
+  std::array<bool, 7> has_last_sent_{};
+  std::chrono::steady_clock::time_point last_stream_time_{};
   rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr servo_pub_;
   rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr js_pub_;
   rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr js_sub_;

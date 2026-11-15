@@ -34,9 +34,9 @@
 
         .container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: 20px;
-            max-width: 1400px;
+            max-width: 1680px;
             width: 100%;
         }
 
@@ -203,6 +203,135 @@
         .primary-btn:hover:not(:disabled) {
             background: linear-gradient(135deg, #3a86ff, #00d2ff);
         }
+
+        .jog-active, .btn.jog-active:not(:disabled) {
+            background: var(--accent) !important;
+            color: #000 !important;
+            border-color: var(--accent) !important;
+        }
+
+        .manual-header-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .manual-badge {
+            font-size: 0.72em;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+        }
+        .manual-badge.active {
+            background: rgba(0, 210, 255, 0.16);
+            color: var(--accent);
+            border: 1px solid rgba(0, 210, 255, 0.35);
+        }
+        .manual-badge.warn {
+            background: rgba(255, 82, 82, 0.18);
+            color: #ff6b6b;
+            border: 1px solid rgba(255, 82, 82, 0.45);
+        }
+
+        .autolevel-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .autolevel-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 0.9em;
+            user-select: none;
+        }
+
+        .planar-readout {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            flex-wrap: wrap;
+            font-family: monospace;
+            font-size: 0.85em;
+            color: var(--text-muted);
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 8px 10px;
+        }
+        .planar-readout b {
+            color: var(--accent);
+        }
+
+        .manual-translation-layout {
+            display: grid;
+            grid-template-columns: 3fr 1.15fr;
+            gap: 10px;
+            align-items: stretch;
+        }
+
+        .manual-xy-dpad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+        }
+
+        .manual-z-col {
+            display: grid;
+            grid-template-rows: 1fr auto 1fr;
+            gap: 6px;
+        }
+
+        .manual-dpad-btn {
+            padding: 10px 4px;
+            font-size: 0.86em;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            line-height: 1.1;
+            min-height: 52px;
+        }
+
+        .manual-dpad-sub {
+            font-size: 0.72em;
+            color: var(--text-muted);
+        }
+        .jog-active .manual-dpad-sub {
+            color: #111;
+        }
+
+        .manual-center {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: monospace;
+            font-size: 0.75em;
+            color: var(--text-muted);
+            background: rgba(0, 0, 0, 0.28);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            padding: 4px;
+            line-height: 1.3;
+        }
+
+        .gripper-row {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 8px;
+            align-items: stretch;
+        }
     </style>
 </head>
 <body>
@@ -226,7 +355,7 @@
 
             <div class="slider-container">
                 <span class="axes-label" style="margin:0;">Speed</span>
-                <input type="range" id="speedSlider" min="1" max="100" value="50" oninput="updateSpeed()">
+                <input type="range" id="speedSlider" min="10" max="100" step="5" value="50" oninput="updateSpeed()">
                 <span id="speedValue" style="width: 40px; text-align: right;">50%</span>
             </div>
 
@@ -246,15 +375,15 @@
                 <span class="axes-label">Translation X / Y</span>
                 <div class="control-pad">
                     <div class="btn empty"></div>
-                    <button class="btn teleop-btn" onmousedown="pubTwist(1, 0, 0, 0, 0, 0)" onmouseup="stopTwist()" onmouseleave="stopTwist()">X+</button>
+                    <button class="btn teleop-btn" onmousedown="startTwistBtn(this, 1, 0, 0, 0, 0, 0)" onmouseup="endTwist()" onmouseleave="endTwist()" ontouchstart="event.preventDefault(); startTwistBtn(this, 1, 0, 0, 0, 0, 0)" ontouchend="event.preventDefault(); endTwist()" ontouchcancel="event.preventDefault(); endTwist()">X+</button>
                     <div class="btn empty"></div>
                     
-                    <button class="btn teleop-btn" onmousedown="pubTwist(0, 1, 0, 0, 0, 0)" onmouseup="stopTwist()" onmouseleave="stopTwist()">Y+</button>
+                    <button class="btn teleop-btn" onmousedown="startTwistBtn(this, 0, 1, 0, 0, 0, 0)" onmouseup="endTwist()" onmouseleave="endTwist()" ontouchstart="event.preventDefault(); startTwistBtn(this, 0, 1, 0, 0, 0, 0)" ontouchend="event.preventDefault(); endTwist()" ontouchcancel="event.preventDefault(); endTwist()">Y+</button>
                     <div class="btn empty"></div>
-                    <button class="btn teleop-btn" onmousedown="pubTwist(0, -1, 0, 0, 0, 0)" onmouseup="stopTwist()" onmouseleave="stopTwist()">Y-</button>
+                    <button class="btn teleop-btn" onmousedown="startTwistBtn(this, 0, -1, 0, 0, 0, 0)" onmouseup="endTwist()" onmouseleave="endTwist()" ontouchstart="event.preventDefault(); startTwistBtn(this, 0, -1, 0, 0, 0, 0)" ontouchend="event.preventDefault(); endTwist()" ontouchcancel="event.preventDefault(); endTwist()">Y-</button>
                     
                     <div class="btn empty"></div>
-                    <button class="btn teleop-btn" onmousedown="pubTwist(-1, 0, 0, 0, 0, 0)" onmouseup="stopTwist()" onmouseleave="stopTwist()">X-</button>
+                    <button class="btn teleop-btn" onmousedown="startTwistBtn(this, -1, 0, 0, 0, 0, 0)" onmouseup="endTwist()" onmouseleave="endTwist()" ontouchstart="event.preventDefault(); startTwistBtn(this, -1, 0, 0, 0, 0, 0)" ontouchend="event.preventDefault(); endTwist()" ontouchcancel="event.preventDefault(); endTwist()">X-</button>
                     <div class="btn empty"></div>
                 </div>
             </div>
@@ -262,25 +391,235 @@
             <div class="row-group">
                 <span class="axes-label">Translation Z</span>
                 <div class="control-pad" style="grid-template-columns: repeat(2, 1fr);">
-                    <button class="btn teleop-btn" onmousedown="pubTwist(0, 0, 1, 0, 0, 0)" onmouseup="stopTwist()" onmouseleave="stopTwist()">Z+</button>
-                    <button class="btn teleop-btn" onmousedown="pubTwist(0, 0, -1, 0, 0, 0)" onmouseup="stopTwist()" onmouseleave="stopTwist()">Z-</button>
+                    <button class="btn teleop-btn" onmousedown="startTwistBtn(this, 0, 0, 1, 0, 0, 0)" onmouseup="endTwist()" onmouseleave="endTwist()" ontouchstart="event.preventDefault(); startTwistBtn(this, 0, 0, 1, 0, 0, 0)" ontouchend="event.preventDefault(); endTwist()" ontouchcancel="event.preventDefault(); endTwist()">Z+</button>
+                    <button class="btn teleop-btn" onmousedown="startTwistBtn(this, 0, 0, -1, 0, 0, 0)" onmouseup="endTwist()" onmouseleave="endTwist()" ontouchstart="event.preventDefault(); startTwistBtn(this, 0, 0, -1, 0, 0, 0)" ontouchend="event.preventDefault(); endTwist()" ontouchcancel="event.preventDefault(); endTwist()">Z-</button>
                 </div>
             </div>
 
             <div class="row-group">
                 <span class="axes-label">Rotation (Roll / Pitch / Yaw)</span>
                 <div class="control-pad">
-                    <button class="btn teleop-btn" onmousedown="pubTwist(0, 0, 0, 1, 0, 0)" onmouseup="stopTwist()" onmouseleave="stopTwist()">R+</button>
-                    <button class="btn teleop-btn" onmousedown="pubTwist(0, 0, 0, 0, 1, 0)" onmouseup="stopTwist()" onmouseleave="stopTwist()">P+</button>
-                    <button class="btn teleop-btn" onmousedown="pubTwist(0, 0, 0, 0, 0, 1)" onmouseup="stopTwist()" onmouseleave="stopTwist()">Y+</button>
+                    <button class="btn teleop-btn" onmousedown="startTwistBtn(this, 0, 0, 0, 1, 0, 0)" onmouseup="endTwist()" onmouseleave="endTwist()" ontouchstart="event.preventDefault(); startTwistBtn(this, 0, 0, 0, 1, 0, 0)" ontouchend="event.preventDefault(); endTwist()" ontouchcancel="event.preventDefault(); endTwist()">R+</button>
+                    <button class="btn teleop-btn" onmousedown="startTwistBtn(this, 0, 0, 0, 0, 1, 0)" onmouseup="endTwist()" onmouseleave="endTwist()" ontouchstart="event.preventDefault(); startTwistBtn(this, 0, 0, 0, 0, 1, 0)" ontouchend="event.preventDefault(); endTwist()" ontouchcancel="event.preventDefault(); endTwist()">P+</button>
+                    <button class="btn teleop-btn" onmousedown="startTwistBtn(this, 0, 0, 0, 0, 0, 1)" onmouseup="endTwist()" onmouseleave="endTwist()" ontouchstart="event.preventDefault(); startTwistBtn(this, 0, 0, 0, 0, 0, 1)" ontouchend="event.preventDefault(); endTwist()" ontouchcancel="event.preventDefault(); endTwist()">Y+</button>
                     
-                    <button class="btn teleop-btn" onmousedown="pubTwist(0, 0, 0, -1, 0, 0)" onmouseup="stopTwist()" onmouseleave="stopTwist()">R-</button>
-                    <button class="btn teleop-btn" onmousedown="pubTwist(0, 0, 0, 0, -1, 0)" onmouseup="stopTwist()" onmouseleave="stopTwist()">P-</button>
-                    <button class="btn teleop-btn" onmousedown="pubTwist(0, 0, 0, 0, 0, -1)" onmouseup="stopTwist()" onmouseleave="stopTwist()">Y-</button>
+                    <button class="btn teleop-btn" onmousedown="startTwistBtn(this, 0, 0, 0, -1, 0, 0)" onmouseup="endTwist()" onmouseleave="endTwist()" ontouchstart="event.preventDefault(); startTwistBtn(this, 0, 0, 0, -1, 0, 0)" ontouchend="event.preventDefault(); endTwist()" ontouchcancel="event.preventDefault(); endTwist()">R-</button>
+                    <button class="btn teleop-btn" onmousedown="startTwistBtn(this, 0, 0, 0, 0, -1, 0)" onmouseup="endTwist()" onmouseleave="endTwist()" ontouchstart="event.preventDefault(); startTwistBtn(this, 0, 0, 0, 0, -1, 0)" ontouchend="event.preventDefault(); endTwist()" ontouchcancel="event.preventDefault(); endTwist()">P-</button>
+                    <button class="btn teleop-btn" onmousedown="startTwistBtn(this, 0, 0, 0, 0, 0, -1)" onmouseup="endTwist()" onmouseleave="endTwist()" ontouchstart="event.preventDefault(); startTwistBtn(this, 0, 0, 0, 0, 0, -1)" ontouchend="event.preventDefault(); endTwist()" ontouchcancel="event.preventDefault(); endTwist()">Y-</button>
                 </div>
             </div>
             
             <button class="btn teleop-btn" onclick="unfoldRobot()">Unfold Robot (Stand Pose)</button>
+        </div>
+
+        <!-- Manual Boom & Wrist (2.5D IK) Panel (ported from web_ui_2.0 ArmManualTab.vue) -->
+        <div class="panel">
+            <h2>Teleop: Manual (2.5D)</h2>
+            <div class="row-group">
+                <div class="manual-header-row" style="margin-bottom: 6px;">
+                    <span class="axes-label" style="margin:0;">Direct Planar IK + Roll Level</span>
+                    <span class="manual-badge active" id="manualSpeedBadge">SPEED 50%</span>
+                </div>
+                <div class="autolevel-row">
+                    <label class="autolevel-label" title="Keep gripper pitch constant during boom R/Z motion">
+                        <input type="checkbox" id="autoLevelWristCheckbox" class="teleop-btn" checked onchange="updateAutoLevelBadge()">
+                        <span>AUTO-LEVEL WRIST (J4)</span>
+                    </label>
+                    <span id="autoLevelBadge" class="manual-badge active">ON</span>
+                </div>
+                <div class="planar-readout">
+                    <span>Reach R: <b id="planarReach">0 mm</b></span>
+                    <span>|</span>
+                    <span>Height Z: <b id="planarHeight">0 mm</b></span>
+                    <span>|</span>
+                    <span>Pitch: <b id="planarPitch">0.0°</b></span>
+                </div>
+            </div>
+
+            <div class="row-group">
+                <div class="manual-header-row">
+                    <span class="axes-label" style="margin:0;">Boom Control (R / Z / Yaw)</span>
+                    <span id="boomStatusBadge" class="manual-badge active">2.5D DLS</span>
+                </div>
+                <div class="manual-translation-layout">
+                    <div class="manual-xy-dpad">
+                        <div></div>
+                        <button class="btn teleop-btn manual-dpad-btn"
+                            onmousedown="startManualJog(this, { kind: 'boom', dR: 1, dZ: 0 })"
+                            onmouseup="stopManualJog()" onmouseleave="stopManualJog()"
+                            ontouchstart="event.preventDefault(); startManualJog(this, { kind: 'boom', dR: 1, dZ: 0 })"
+                            ontouchend="event.preventDefault(); stopManualJog()" ontouchcancel="event.preventDefault(); stopManualJog()">
+                            <span>▲ REACH +</span>
+                            <span class="manual-dpad-sub">(FWD)</span>
+                        </button>
+                        <div></div>
+
+                        <button class="btn teleop-btn manual-dpad-btn"
+                            onmousedown="startManualJog(this, { kind: 'joint', idx: 0, dir: 1 })"
+                            onmouseup="stopManualJog()" onmouseleave="stopManualJog()"
+                            ontouchstart="event.preventDefault(); startManualJog(this, { kind: 'joint', idx: 0, dir: 1 })"
+                            ontouchend="event.preventDefault(); stopManualJog()" ontouchcancel="event.preventDefault(); stopManualJog()">
+                            <span>◀ BASE L</span>
+                        </button>
+
+                        <div class="manual-center">
+                            <span id="manJ0">J0 0.0°</span>
+                            <span id="manJ1">J1 0.0°</span>
+                            <span id="manJ2">J2 0.0°</span>
+                        </div>
+
+                        <button class="btn teleop-btn manual-dpad-btn"
+                            onmousedown="startManualJog(this, { kind: 'joint', idx: 0, dir: -1 })"
+                            onmouseup="stopManualJog()" onmouseleave="stopManualJog()"
+                            ontouchstart="event.preventDefault(); startManualJog(this, { kind: 'joint', idx: 0, dir: -1 })"
+                            ontouchend="event.preventDefault(); stopManualJog()" ontouchcancel="event.preventDefault(); stopManualJog()">
+                            <span>BASE R ▶</span>
+                        </button>
+
+                        <div></div>
+                        <button class="btn teleop-btn manual-dpad-btn"
+                            onmousedown="startManualJog(this, { kind: 'boom', dR: -1, dZ: 0 })"
+                            onmouseup="stopManualJog()" onmouseleave="stopManualJog()"
+                            ontouchstart="event.preventDefault(); startManualJog(this, { kind: 'boom', dR: -1, dZ: 0 })"
+                            ontouchend="event.preventDefault(); stopManualJog()" ontouchcancel="event.preventDefault(); stopManualJog()">
+                            <span>▼ REACH -</span>
+                            <span class="manual-dpad-sub">(BACK)</span>
+                        </button>
+                        <div></div>
+                    </div>
+
+                    <div class="manual-z-col">
+                        <button class="btn teleop-btn manual-dpad-btn"
+                            onmousedown="startManualJog(this, { kind: 'boom', dR: 0, dZ: 1 })"
+                            onmouseup="stopManualJog()" onmouseleave="stopManualJog()"
+                            ontouchstart="event.preventDefault(); startManualJog(this, { kind: 'boom', dR: 0, dZ: 1 })"
+                            ontouchend="event.preventDefault(); stopManualJog()" ontouchcancel="event.preventDefault(); stopManualJog()">
+                            <span>▲ UP</span>
+                            <span class="manual-dpad-sub">(Z+)</span>
+                        </button>
+                        <div class="manual-center">
+                            <span>HEIGHT</span>
+                            <span id="manHeightVal">0</span>
+                        </div>
+                        <button class="btn teleop-btn manual-dpad-btn"
+                            onmousedown="startManualJog(this, { kind: 'boom', dR: 0, dZ: -1 })"
+                            onmouseup="stopManualJog()" onmouseleave="stopManualJog()"
+                            ontouchstart="event.preventDefault(); startManualJog(this, { kind: 'boom', dR: 0, dZ: -1 })"
+                            ontouchend="event.preventDefault(); stopManualJog()" ontouchcancel="event.preventDefault(); stopManualJog()">
+                            <span>▼ DOWN</span>
+                            <span class="manual-dpad-sub">(Z-)</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row-group" style="margin-bottom: 16px;">
+                <div class="manual-header-row">
+                    <span class="axes-label" style="margin:0;">Wrist &amp; Tool Control</span>
+                    <span id="wristStatusBadge" class="manual-badge active">J3 + J5 LEVEL</span>
+                </div>
+                <div class="manual-translation-layout">
+                    <div class="manual-xy-dpad">
+                        <div></div>
+                        <button class="btn teleop-btn manual-dpad-btn"
+                            onmousedown="startManualJog(this, { kind: 'joint', idx: 4, dir: 1 })"
+                            onmouseup="stopManualJog()" onmouseleave="stopManualJog()"
+                            ontouchstart="event.preventDefault(); startManualJog(this, { kind: 'joint', idx: 4, dir: 1 })"
+                            ontouchend="event.preventDefault(); stopManualJog()" ontouchcancel="event.preventDefault(); stopManualJog()">
+                            <span>▲ PITCH</span>
+                            <span class="manual-dpad-sub">(UP)</span>
+                        </button>
+                        <div></div>
+
+                        <button class="btn teleop-btn manual-dpad-btn"
+                            onmousedown="startManualJog(this, { kind: 'wrist_yaw', dir: -1 })"
+                            onmouseup="stopManualJog()" onmouseleave="stopManualJog()"
+                            ontouchstart="event.preventDefault(); startManualJog(this, { kind: 'wrist_yaw', dir: -1 })"
+                            ontouchend="event.preventDefault(); stopManualJog()" ontouchcancel="event.preventDefault(); stopManualJog()">
+                            <span>◀ WRIST</span>
+                            <span class="manual-dpad-sub">(LEFT)</span>
+                        </button>
+
+                        <div class="manual-center">
+                            <span id="manJ3">J3 0.0°</span>
+                            <span id="manJ4">J4 0.0°</span>
+                            <span id="manJ5">J5 0.0°</span>
+                        </div>
+
+                        <button class="btn teleop-btn manual-dpad-btn"
+                            onmousedown="startManualJog(this, { kind: 'wrist_yaw', dir: 1 })"
+                            onmouseup="stopManualJog()" onmouseleave="stopManualJog()"
+                            ontouchstart="event.preventDefault(); startManualJog(this, { kind: 'wrist_yaw', dir: 1 })"
+                            ontouchend="event.preventDefault(); stopManualJog()" ontouchcancel="event.preventDefault(); stopManualJog()">
+                            <span>WRIST ▶</span>
+                            <span class="manual-dpad-sub">(RIGHT)</span>
+                        </button>
+
+                        <div></div>
+                        <button class="btn teleop-btn manual-dpad-btn"
+                            onmousedown="startManualJog(this, { kind: 'joint', idx: 4, dir: -1 })"
+                            onmouseup="stopManualJog()" onmouseleave="stopManualJog()"
+                            ontouchstart="event.preventDefault(); startManualJog(this, { kind: 'joint', idx: 4, dir: -1 })"
+                            ontouchend="event.preventDefault(); stopManualJog()" ontouchcancel="event.preventDefault(); stopManualJog()">
+                            <span>▼ PITCH</span>
+                            <span class="manual-dpad-sub">(DOWN)</span>
+                        </button>
+                        <div></div>
+                    </div>
+
+                    <div class="manual-z-col">
+                        <button class="btn teleop-btn manual-dpad-btn"
+                            onmousedown="startManualJog(this, { kind: 'joint', idx: 5, dir: -1 })"
+                            onmouseup="stopManualJog()" onmouseleave="stopManualJog()"
+                            ontouchstart="event.preventDefault(); startManualJog(this, { kind: 'joint', idx: 5, dir: -1 })"
+                            ontouchend="event.preventDefault(); stopManualJog()" ontouchcancel="event.preventDefault(); stopManualJog()">
+                            <span>↶ ROLL L</span>
+                        </button>
+                        <div class="manual-center">
+                            <span>ROLL</span>
+                            <span id="manRollVal">0.0°</span>
+                        </div>
+                        <button class="btn teleop-btn manual-dpad-btn"
+                            onmousedown="startManualJog(this, { kind: 'joint', idx: 5, dir: 1 })"
+                            onmouseup="stopManualJog()" onmouseleave="stopManualJog()"
+                            ontouchstart="event.preventDefault(); startManualJog(this, { kind: 'joint', idx: 5, dir: 1 })"
+                            ontouchend="event.preventDefault(); stopManualJog()" ontouchcancel="event.preventDefault(); stopManualJog()">
+                            <span>↷ ROLL R</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row-group" style="margin-bottom: 0;">
+                <div class="manual-header-row">
+                    <span class="axes-label" style="margin:0;">Gripper Control (Clamp)</span>
+                    <span id="gripperStatusBadge" class="manual-badge active">J6 (-0.5..+0.5)</span>
+                </div>
+                <div class="gripper-row">
+                    <button class="btn teleop-btn manual-dpad-btn"
+                        onmousedown="startManualJog(this, { kind: 'clamp', dir: -1 })"
+                        onmouseup="stopManualJog()" onmouseleave="stopManualJog()"
+                        ontouchstart="event.preventDefault(); startManualJog(this, { kind: 'clamp', dir: -1 })"
+                        ontouchend="event.preventDefault(); stopManualJog()" ontouchcancel="event.preventDefault(); stopManualJog()">
+                        <span>◀ CLOSE</span>
+                        <span class="manual-dpad-sub">(-0.5)</span>
+                    </button>
+
+                    <div class="manual-center" style="min-width: 78px; padding: 4px 8px;">
+                        <span id="manGripPct">50%</span>
+                        <span id="manGripRad" class="manual-dpad-sub">0.00 rad</span>
+                    </div>
+
+                    <button class="btn teleop-btn manual-dpad-btn"
+                        onmousedown="startManualJog(this, { kind: 'clamp', dir: 1 })"
+                        onmouseup="stopManualJog()" onmouseleave="stopManualJog()"
+                        ontouchstart="event.preventDefault(); startManualJog(this, { kind: 'clamp', dir: 1 })"
+                        ontouchend="event.preventDefault(); stopManualJog()" ontouchcancel="event.preventDefault(); stopManualJog()">
+                        <span>OPEN ▶</span>
+                        <span class="manual-dpad-sub">(+0.5)</span>
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- Joint Control & Telemetry Panel -->
@@ -363,6 +702,8 @@
             let val = document.getElementById('speedSlider').value;
             speedScale = val / 100.0;
             document.getElementById('speedValue').textContent = val + '%';
+            let manualBadge = document.getElementById('manualSpeedBadge');
+            if (manualBadge) manualBadge.textContent = 'SPEED ' + val + '%';
         }
 
         ros.on('connection', function() {
@@ -373,6 +714,7 @@
         });
 
         ros.on('error', function(error) {
+            stopAllTeleop();
             let status = document.getElementById('status');
             status.textContent = 'Error connecting';
             status.className = '';
@@ -380,6 +722,7 @@
         });
 
         ros.on('close', function() {
+            stopAllTeleop();
             let status = document.getElementById('status');
             status.textContent = 'Disconnected';
             status.className = '';
@@ -460,6 +803,9 @@
 
         function setSystemMode(mode) {
             currentMode = mode;
+            if (mode !== 'MANUAL') {
+                stopAllTeleop();
+            }
             let msg = new ROSLIB.Message({ data: mode });
             modeTopic.publish(msg);
             
@@ -517,6 +863,12 @@
         var jointSub = new ROSLIB.Topic({
             ros : ros,
             name : '/joint_states',
+            messageType : 'sensor_msgs/JointState'
+        });
+
+        var armJointStateSub = new ROSLIB.Topic({
+            ros : ros,
+            name : '/arm_joint_states',
             messageType : 'sensor_msgs/JointState'
         });
 
@@ -744,48 +1096,581 @@
             }
             if(html !== '') {
                 document.getElementById('jointData').textContent = html;
+                updateManualReadout();
+            }
+        });
+
+        armJointStateSub.subscribe(function(msg) {
+            if (performance.now() - lastClampCmdAt < 250) return;
+            const names = msg.name || [];
+            const positions = msg.position || [];
+            const idx = names.indexOf('arm_clamp');
+            if (idx !== -1 && idx < positions.length && Number.isFinite(positions[idx])) {
+                currentClampRad = clampGripperRad(positions[idx]);
+                updateManualReadout();
             }
         });
 
         // ------------------------------------
-        // CARTESIAN CONTROL (TWIST) LOGIC
+        // MANUAL 2.5D KINEMATICS & JOG (ported from web_ui_2.0 armKinematics.js + ArmManualTab.vue)
         // ------------------------------------
+        const MANUAL_DT_SEC = 0.05;
+        const MANUAL_TRAJ_DURATION_SEC = 0.08;
+        const MANUAL_MAX_LINEAR_MPS = 0.15;
+        const MANUAL_MAX_ANGULAR_RAD_S = 0.7;
+        const CLAMP_MIN_RAD = -0.5;
+        const CLAMP_MAX_RAD = 0.5;
+
+        const ARM_JOINT_LIMITS_RAD = [
+            { min: -1.57, max: 1.57 },
+            { min: -0.05, max: 3.14 },
+            { min: -3.2, max: 0.05 },
+            { min: -1.57, max: 1.57 },
+            { min: -1.57, max: 1.57 },
+            { min: -1.57, max: 1.57 }
+        ];
+        const ARM_L1 = 0.274;
+        const ARM_L2 = 0.216;
+        const ARM_WRIST_DY = 0.028;
+        const ARM_SHOULDER_Z = 0.09;
+        const BOOM_DLS_LAMBDA = 0.015;
+
+        function clampGripperRad(valueRad) {
+            if (!Number.isFinite(valueRad)) return 0;
+            return Math.min(CLAMP_MAX_RAD, Math.max(CLAMP_MIN_RAD, valueRad));
+        }
+
+        function clampJointRad(index, valueRad) {
+            const lim = ARM_JOINT_LIMITS_RAD[index];
+            if (!lim || !Number.isFinite(valueRad)) return 0;
+            return Math.min(lim.max, Math.max(lim.min, valueRad));
+        }
+
+        function makeOriginMat4(xyz, rpy) {
+            const [rx, ry, rz] = rpy;
+            const cx = Math.cos(rx), sx = Math.sin(rx);
+            const cy = Math.cos(ry), sy = Math.sin(ry);
+            const cz = Math.cos(rz), sz = Math.sin(rz);
+            return [
+                cz * cy, cz * sy * sx - sz * cx, cz * sy * cx + sz * sx, xyz[0],
+                sz * cy, sz * sy * sx + cz * cx, sz * sy * cx - cz * sx, xyz[1],
+                -sy, cy * sx, cy * cx, xyz[2],
+                0, 0, 0, 1
+            ];
+        }
+
+        function makeJointAxisMat4(axis, q) {
+            const c = Math.cos(q);
+            const s = Math.sin(q);
+            if (axis === 'x') {
+                return [1, 0, 0, 0, 0, c, -s, 0, 0, s, c, 0, 0, 0, 0, 1];
+            }
+            if (axis === 'y') {
+                return [c, 0, s, 0, 0, 1, 0, 0, -s, 0, c, 0, 0, 0, 0, 1];
+            }
+            return [c, -s, 0, 0, s, c, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+        }
+
+        function mulMat4(a, b) {
+            const out = new Array(16);
+            for (let r = 0; r < 4; r++) {
+                const r4 = r * 4;
+                const a0 = a[r4], a1 = a[r4 + 1], a2 = a[r4 + 2], a3 = a[r4 + 3];
+                out[r4] = a0 * b[0] + a1 * b[4] + a2 * b[8] + a3 * b[12];
+                out[r4 + 1] = a0 * b[1] + a1 * b[5] + a2 * b[9] + a3 * b[13];
+                out[r4 + 2] = a0 * b[2] + a1 * b[6] + a2 * b[10] + a3 * b[14];
+                out[r4 + 3] = a0 * b[3] + a1 * b[7] + a2 * b[11] + a3 * b[15];
+            }
+            return out;
+        }
+
+        const URDF_CHAIN = [
+            { origin: makeOriginMat4([0, 0, 0.01], [1.5708, 0, -1.5708]), axis: 'y' },
+            { origin: makeOriginMat4([0, 0.08, 0], [0, 0, -3.1416]), axis: 'x' },
+            { origin: makeOriginMat4([0, 0, 0.274], [-3.1416, 0, 0]), axis: 'x' },
+            { origin: makeOriginMat4([0, 0.028, 0.076], [3.1416, 0, 3.1416]), axis: 'z' },
+            { origin: makeOriginMat4([0, 0, -0.14], [0, 0, 0]), axis: 'x' },
+            { origin: makeOriginMat4([-0.0095, 0, -0.0225], [3.1416, 1.5708, 0]), axis: 'x' }
+        ];
+        const FLANGE_ORIGIN = makeOriginMat4([0.073, 0, 0], [0, 0, 0]);
+
+        function computeArmToolFrame(qRad) {
+            let T = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+            for (let i = 0; i < URDF_CHAIN.length; i++) {
+                T = mulMat4(T, URDF_CHAIN[i].origin);
+                T = mulMat4(T, makeJointAxisMat4(URDF_CHAIN[i].axis, Number(qRad[i]) || 0));
+            }
+            T = mulMat4(T, FLANGE_ORIGIN);
+
+            const sinp = -T[8];
+            const pitchRad = Math.abs(sinp) >= 1 ? Math.sign(sinp) * (Math.PI / 2) : Math.asin(sinp);
+            const rollRad = Math.atan2(T[9], T[10]);
+            const yawRad = Math.atan2(T[4], T[0]);
+            const xyLen = Math.hypot(T[0], T[4]);
+            const pitchElevRad = Math.atan2(T[8], xyLen);
+            const radToDeg = 180.0 / Math.PI;
+
+            return {
+                position: [T[3], T[7], T[11]],
+                xAxis: [T[0], T[4], T[8]],
+                zAxis: [T[2], T[6], T[10]],
+                rollDeg: rollRad * radToDeg,
+                pitchDeg: pitchRad * radToDeg,
+                yawDeg: yawRad * radToDeg,
+                pitchElevRad,
+                pitchElevDeg: pitchElevRad * radToDeg
+            };
+        }
+
+        function computePlanarWristRZ(q1, q2) {
+            const alpha = q1 + q2;
+            const r = -ARM_L1 * Math.cos(q1) + ARM_L2 * Math.cos(alpha) + ARM_WRIST_DY * Math.sin(alpha);
+            const z = ARM_SHOULDER_Z + ARM_L1 * Math.sin(q1) + ARM_WRIST_DY * Math.cos(alpha) - ARM_L2 * Math.sin(alpha);
+            return { r, z };
+        }
+
+        function computePlanarState(qRad) {
+            const q1 = Number(qRad[1]) || 0;
+            const q2 = Number(qRad[2]) || 0;
+            const { r, z } = computePlanarWristRZ(q1, q2);
+            const frame = computeArmToolFrame(qRad);
+            return {
+                reachM: r,
+                heightM: z,
+                reachMm: r * 1000.0,
+                heightMm: z * 1000.0,
+                pitchElevDeg: frame.pitchElevDeg
+            };
+        }
+
+        function stepCylindricalBoom(qRad, dR, dZ, autoLevelJ4 = true) {
+            const q = [...qRad];
+            const q1 = q[1];
+            const q2 = q[2];
+            const q4 = q[4];
+            const alpha = q1 + q2;
+
+            const sin1 = Math.sin(q1), cos1 = Math.cos(q1);
+            const sinA = Math.sin(alpha), cosA = Math.cos(alpha);
+            const j00 = ARM_L1 * sin1 - ARM_L2 * sinA + ARM_WRIST_DY * cosA;
+            const j01 = -ARM_L2 * sinA + ARM_WRIST_DY * cosA;
+            const j10 = ARM_L1 * cos1 - ARM_WRIST_DY * sinA - ARM_L2 * cosA;
+            const j11 = -ARM_WRIST_DY * sinA - ARM_L2 * cosA;
+
+            const detJ = j00 * j11 - j01 * j10;
+            const { r, z } = computePlanarWristRZ(q1, q2);
+            const outward = r * dR + (z - ARM_SHOULDER_Z) * dZ;
+            if (Math.abs(detJ) < 0.006 && outward > 0) {
+                return { joints: q, applied: false, reason: 'MAX_REACH' };
+            }
+
+            const lam2 = BOOM_DLS_LAMBDA * BOOM_DLS_LAMBDA;
+            const a00 = j00 * j00 + j01 * j01 + lam2;
+            const a01 = j00 * j10 + j01 * j11;
+            const a11 = j10 * j10 + j11 * j11 + lam2;
+            const detA = a00 * a11 - a01 * a01;
+            if (detA < 1e-12) {
+                return { joints: q, applied: false, reason: 'SINGULAR' };
+            }
+
+            const invDet = 1.0 / detA;
+            const v0 = (a11 * dR - a01 * dZ) * invDet;
+            const v1 = (-a01 * dR + a00 * dZ) * invDet;
+            const dq1 = j00 * v0 + j10 * v1;
+            const dq2 = j01 * v0 + j11 * v1;
+
+            const q1Next = q1 + dq1;
+            const q2Next = q2 + dq2;
+            if (
+                q1Next < ARM_JOINT_LIMITS_RAD[1].min || q1Next > ARM_JOINT_LIMITS_RAD[1].max ||
+                q2Next < ARM_JOINT_LIMITS_RAD[2].min || q2Next > ARM_JOINT_LIMITS_RAD[2].max
+            ) {
+                return { joints: q, applied: false, reason: 'LIMIT' };
+            }
+
+            q[1] = q1Next;
+            q[2] = q2Next;
+
+            if (autoLevelJ4) {
+                let dq4 = dq1 + dq2;
+                if (Math.abs(q[3]) > 1e-3) {
+                    const eps = 1e-4;
+                    const baseElev = computeArmToolFrame(qRad).pitchElevRad;
+                    const de1 = (computeArmToolFrame([q[0], q1 + eps, q2, q[3], q4, q[5]]).pitchElevRad - baseElev) / eps;
+                    const de2 = (computeArmToolFrame([q[0], q1, q2 + eps, q[3], q4, q[5]]).pitchElevRad - baseElev) / eps;
+                    const de4 = (computeArmToolFrame([q[0], q1, q2, q[3], q4 + eps, q[5]]).pitchElevRad - baseElev) / eps;
+                    if (Math.abs(de4) > 0.35) {
+                        dq4 = -(de1 * dq1 + de2 * dq2) / de4;
+                    } else {
+                        dq4 = (dq1 + dq2) * Math.cos(q[3]);
+                    }
+                }
+                q[4] = clampJointRad(4, q4 + dq4);
+            }
+
+            return { joints: q, applied: true, reason: null };
+        }
+
+        function stepWristYawWithRollComp(qRad, dq3, targetJawRollZ = 0) {
+            const q = [...qRad];
+            const q3Next = clampJointRad(3, q[3] + dq3);
+            const effectiveDq3 = q3Next - q[3];
+            if (Math.abs(effectiveDq3) < 1e-6) {
+                return { joints: q, applied: false, reason: 'LIMIT' };
+            }
+
+            const eps = 1e-4;
+            const frame0 = computeArmToolFrame(q);
+            const z0 = frame0.zAxis[2];
+            const dz3 = (computeArmToolFrame([q[0], q[1], q[2], q[3] + eps, q[4], q[5]]).zAxis[2] - z0) / eps;
+            const dz5 = (computeArmToolFrame([q[0], q[1], q[2], q[3], q[4], q[5] + eps]).zAxis[2] - z0) / eps;
+
+            let q5Next = q[5];
+            if (Math.abs(dz5) > 0.15) {
+                const dq5 = (-dz3 * effectiveDq3 - 0.5 * (z0 - targetJawRollZ)) / dz5;
+                q5Next = clampJointRad(5, q[5] + dq5);
+            }
+
+            q[3] = q3Next;
+            q[5] = q5Next;
+            return { joints: q, applied: true, reason: null };
+        }
+
+        function publishJointPositionsRad(radArray, durationSec = 3.0) {
+            const rawDuration = Number(durationSec);
+            const d = Number.isFinite(rawDuration) && rawDuration >= 0.05 ? rawDuration : 3.0;
+            const targetRad = radArray.map((rad, idx) => clampJointRad(idx, Number(rad) || 0.0));
+
+            let sec = Math.floor(d);
+            let nanosec = Math.round((d - sec) * 1000000000);
+            if (nanosec >= 1000000000) {
+                sec += 1;
+                nanosec -= 1000000000;
+            }
+            const msg = new ROSLIB.Message({
+                header: { stamp: { sec: 0, nanosec: 0 }, frame_id: '' },
+                joint_names: ['arm_joint_0', 'arm_joint_1', 'arm_joint_2', 'arm_joint_3', 'arm_joint_4', 'arm_joint_5'],
+                points: [{
+                    positions: targetRad,
+                    velocities: [],
+                    accelerations: [],
+                    effort: [],
+                    time_from_start: { sec: sec, nanosec: nanosec }
+                }]
+            });
+            directJointTrajTopic.publish(msg);
+        }
+
+        function publishClampRad(clampRad, durationSec = 0.08) {
+            const targetRad = clampGripperRad(Number(clampRad) || 0.0);
+            currentClampRad = targetRad;
+            lastClampCmdAt = performance.now();
+            updateManualReadout();
+
+            const rawDuration = Number(durationSec);
+            const d = Number.isFinite(rawDuration) && rawDuration >= 0.05 ? rawDuration : 0.08;
+            let sec = Math.floor(d);
+            let nanosec = Math.round((d - sec) * 1000000000);
+            if (nanosec >= 1000000000) {
+                sec += 1;
+                nanosec -= 1000000000;
+            }
+            const msg = new ROSLIB.Message({
+                header: { stamp: { sec: 0, nanosec: 0 }, frame_id: '' },
+                joint_names: ['arm_clamp'],
+                points: [{
+                    positions: [targetRad],
+                    velocities: [],
+                    accelerations: [],
+                    effort: [],
+                    time_from_start: { sec: sec, nanosec: nanosec }
+                }]
+            });
+            directJointTrajTopic.publish(msg);
+        }
+
+        var manualJogTimer = null;
+        var latchedJoints = null;
+        var latchedClampRad = 0.0;
+        var currentClampRad = 0.0;
+        var lastClampCmdAt = 0;
+        var targetJawRollZ = 0;
+        var activeManualBtn = null;
+
+        function degStr(idx) {
+            const rad = currentJointAnglesRad[idx] || 0;
+            return ((rad * 180.0) / Math.PI).toFixed(1);
+        }
+
+        function setManualLimitWarning(warning) {
+            const boomBadge = document.getElementById('boomStatusBadge');
+            const wristBadge = document.getElementById('wristStatusBadge');
+            const gripBadge = document.getElementById('gripperStatusBadge');
+            if (!boomBadge || !wristBadge) return;
+            if (!warning) {
+                boomBadge.textContent = '2.5D DLS';
+                boomBadge.className = 'manual-badge active';
+                wristBadge.textContent = 'J3 + J5 LEVEL';
+                wristBadge.className = 'manual-badge active';
+                if (gripBadge) {
+                    gripBadge.textContent = 'J6 (-0.5..+0.5)';
+                    gripBadge.className = 'manual-badge active';
+                }
+                return;
+            }
+            if (warning === 'CLOSED LIMIT' || warning === 'OPEN LIMIT') {
+                if (gripBadge) {
+                    gripBadge.textContent = warning;
+                    gripBadge.className = 'manual-badge warn';
+                }
+                return;
+            }
+            if (warning === 'WRIST LIMIT') {
+                wristBadge.textContent = warning;
+                wristBadge.className = 'manual-badge warn';
+            } else {
+                boomBadge.textContent = warning;
+                boomBadge.className = 'manual-badge warn';
+                wristBadge.textContent = warning;
+                wristBadge.className = 'manual-badge warn';
+            }
+        }
+
+        function updateAutoLevelBadge() {
+            const cb = document.getElementById('autoLevelWristCheckbox');
+            const badge = document.getElementById('autoLevelBadge');
+            if (!cb || !badge) return;
+            badge.textContent = cb.checked ? 'ON' : 'OFF';
+            badge.className = cb.checked ? 'manual-badge active' : 'manual-badge';
+        }
+
+        function updateManualReadout() {
+            const planar = computePlanarState(currentJointAnglesRad);
+            const elR = document.getElementById('planarReach');
+            const elZ = document.getElementById('planarHeight');
+            const elP = document.getElementById('planarPitch');
+            const elH = document.getElementById('manHeightVal');
+            const elRoll = document.getElementById('manRollVal');
+            const elGripPct = document.getElementById('manGripPct');
+            const elGripRad = document.getElementById('manGripRad');
+            if (elR) elR.textContent = Math.round(planar.reachMm) + ' mm';
+            if (elZ) elZ.textContent = Math.round(planar.heightMm) + ' mm';
+            if (elP) elP.textContent = planar.pitchElevDeg.toFixed(1) + '°';
+            if (elH) elH.textContent = Math.round(planar.heightMm);
+            if (elRoll) elRoll.textContent = degStr(5) + '°';
+            if (elGripPct && elGripRad) {
+                const span = CLAMP_MAX_RAD - CLAMP_MIN_RAD;
+                const pct = Math.round(Math.min(100, Math.max(0, ((currentClampRad - CLAMP_MIN_RAD) / span) * 100.0)));
+                elGripPct.textContent = pct + '%';
+                elGripRad.textContent = currentClampRad.toFixed(2) + ' rad';
+            }
+            for (let i = 0; i < 6; i++) {
+                const jEl = document.getElementById(`manJ${i}`);
+                if (jEl) jEl.textContent = `J${i} ${degStr(i)}°`;
+            }
+        }
+
+        function stopManualJog() {
+            if (manualJogTimer) {
+                clearInterval(manualJogTimer);
+                manualJogTimer = null;
+            }
+            if (activeManualBtn) {
+                activeManualBtn.classList.remove('jog-active');
+                activeManualBtn = null;
+            }
+            latchedJoints = null;
+            setManualLimitWarning('');
+        }
+
+        function runManualJogTick(action) {
+            if (currentMode !== 'MANUAL') return;
+
+            const autoLevelEl = document.getElementById('autoLevelWristCheckbox');
+            const autoLevel = autoLevelEl ? autoLevelEl.checked : true;
+            const vLin = MANUAL_MAX_LINEAR_MPS * speedScale;
+            const omega = MANUAL_MAX_ANGULAR_RAD_S * speedScale;
+
+            if (action.kind === 'clamp') {
+                const prev = latchedClampRad;
+                const next = clampGripperRad(prev + action.dir * omega * MANUAL_DT_SEC);
+                if (Math.abs(next - prev) < 1e-6) {
+                    setManualLimitWarning(action.dir < 0 ? 'CLOSED LIMIT' : 'OPEN LIMIT');
+                    return;
+                }
+                setManualLimitWarning('');
+                latchedClampRad = next;
+                publishClampRad(next, MANUAL_TRAJ_DURATION_SEC);
+                return;
+            }
+
+            if (!latchedJoints) return;
+
+            if (action.kind === 'boom') {
+                const dR = action.dR * vLin * MANUAL_DT_SEC;
+                const dZ = action.dZ * vLin * MANUAL_DT_SEC;
+                const res = stepCylindricalBoom(latchedJoints, dR, dZ, autoLevel);
+                if (!res.applied) {
+                    setManualLimitWarning(res.reason === 'MAX_REACH' ? 'MAX REACH' : 'JOINT LIMIT');
+                    return;
+                }
+                setManualLimitWarning('');
+                latchedJoints = res.joints;
+                publishJointPositionsRad(latchedJoints, MANUAL_TRAJ_DURATION_SEC);
+                return;
+            }
+
+            if (action.kind === 'wrist_yaw') {
+                const dq3 = action.dir * omega * MANUAL_DT_SEC;
+                const res = stepWristYawWithRollComp(latchedJoints, dq3, targetJawRollZ);
+                if (!res.applied) {
+                    setManualLimitWarning('WRIST LIMIT');
+                    return;
+                }
+                setManualLimitWarning('');
+                latchedJoints = res.joints;
+                publishJointPositionsRad(latchedJoints, MANUAL_TRAJ_DURATION_SEC);
+                return;
+            }
+
+            if (action.kind === 'joint') {
+                const dq = action.dir * omega * MANUAL_DT_SEC;
+                const prev = latchedJoints[action.idx];
+                const next = clampJointRad(action.idx, prev + dq);
+                if (Math.abs(next - prev) < 1e-6) {
+                    setManualLimitWarning('JOINT LIMIT');
+                    return;
+                }
+                setManualLimitWarning('');
+                latchedJoints[action.idx] = next;
+                publishJointPositionsRad(latchedJoints, MANUAL_TRAJ_DURATION_SEC);
+            }
+        }
+
+        function startManualJog(btnEl, action) {
+            if (currentMode !== 'MANUAL') return;
+            endTwist();
+            stopManualJog();
+
+            activeManualBtn = btnEl || null;
+            if (activeManualBtn) activeManualBtn.classList.add('jog-active');
+
+            // Latch current positions once on press so small steps accumulate cleanly over 50ms ticks
+            latchedJoints = [...currentJointAnglesRad];
+            latchedClampRad = currentClampRad;
+            if (action.kind === 'wrist_yaw') {
+                const z0 = computeArmToolFrame(latchedJoints).zAxis[2];
+                targetJawRollZ = Math.abs(z0) < 0.08 ? 0 : z0;
+            }
+
+            runManualJogTick(action);
+            manualJogTimer = setInterval(() => runManualJogTick(action), MANUAL_DT_SEC * 1000);
+        }
+
+        // ------------------------------------
+        // CARTESIAN CONTROL (TWIST) LOGIC (matched to web_ui_2.0 ArmServoTab.vue: 100ms keepalive + 40ms double zero stop)
+        // ------------------------------------
+        var activeTwistInterval = null;
+        var stopTwistTimer = null;
+        var isTwistJogging = false;
+        var activeTwistBtn = null;
+
         function getSelectedFrame() {
             return document.querySelector('input[name="frameSelect"]:checked').value;
         }
 
-        function pubTwist(lx, ly, lz, ax, ay, az) {
-            if(currentMode !== 'MANUAL') return;
+        function sendRawTwist(lx, ly, lz, ax, ay, az) {
             let msg = new ROSLIB.Message({
-                header: { frame_id: getSelectedFrame() },
+                header: { stamp: { sec: 0, nanosec: 0 }, frame_id: getSelectedFrame() },
                 twist: {
-                    linear : { x : lx * speedScale, y : ly * speedScale, z : lz * speedScale },
-                    angular : { x : ax * speedScale, y : ay * speedScale, z : az * speedScale }
+                    linear : { x : lx, y : ly, z : lz },
+                    angular : { x : ax, y : ay, z : az }
                 }
             });
             cmdVel.publish(msg);
         }
 
-        function stopTwist() {
-            let msg = new ROSLIB.Message({
-                header: { frame_id: getSelectedFrame() },
-                twist: {
-                    linear: { x: 0, y: 0, z: 0 },
-                    angular: { x: 0, y: 0, z: 0 }
+        function publishScaledTwist(lx, ly, lz, ax, ay, az) {
+            sendRawTwist(
+                lx * speedScale, ly * speedScale, lz * speedScale,
+                ax * speedScale, ay * speedScale, az * speedScale
+            );
+        }
+
+        function endTwist() {
+            if (activeTwistBtn) {
+                activeTwistBtn.classList.remove('jog-active');
+                activeTwistBtn = null;
+            }
+            if (!isTwistJogging && !activeTwistInterval) return;
+            isTwistJogging = false;
+            if (activeTwistInterval) {
+                clearInterval(activeTwistInterval);
+                activeTwistInterval = null;
+            }
+            if (stopTwistTimer) {
+                clearTimeout(stopTwistTimer);
+                stopTwistTimer = null;
+            }
+
+            sendRawTwist(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+            // Send zero twice to guarantee immediate halt across bridge (matches ArmServoTab.vue)
+            stopTwistTimer = setTimeout(() => {
+                stopTwistTimer = null;
+                if (!isTwistJogging) {
+                    sendRawTwist(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
                 }
-            });
-            cmdVel.publish(msg);
+            }, 40);
+        }
+
+        function startTwistBtn(btnEl, lx, ly, lz, ax, ay, az) {
+            if (currentMode !== 'MANUAL') return;
+            stopManualJog();
+            if (stopTwistTimer) {
+                clearTimeout(stopTwistTimer);
+                stopTwistTimer = null;
+            }
+            if (activeTwistInterval) {
+                clearInterval(activeTwistInterval);
+                activeTwistInterval = null;
+            }
+            if (activeTwistBtn) activeTwistBtn.classList.remove('jog-active');
+
+            activeTwistBtn = btnEl || null;
+            if (activeTwistBtn) activeTwistBtn.classList.add('jog-active');
+            isTwistJogging = true;
+
+            publishScaledTwist(lx, ly, lz, ax, ay, az);
+            activeTwistInterval = setInterval(() => {
+                if (isTwistJogging && currentMode === 'MANUAL') {
+                    publishScaledTwist(lx, ly, lz, ax, ay, az);
+                }
+            }, 100);
+        }
+
+        function stopAllTeleop() {
+            endTwist();
+            stopManualJog();
         }
 
         function unfoldRobot() {
             if(currentMode !== 'MANUAL') return;
+            stopAllTeleop();
             unfoldTopic.publish(new ROSLIB.Message({}));
         }
+
+        window.addEventListener('mouseup', stopAllTeleop);
+        window.addEventListener('touchend', stopAllTeleop);
+        window.addEventListener('touchcancel', stopAllTeleop);
+        window.addEventListener('blur', stopAllTeleop);
 
         // ------------------------------------
         // Init state
         // ------------------------------------
         initSliders();
+        updateSpeed();
+        updateAutoLevelBadge();
+        updateManualReadout();
         setSystemMode('MANUAL');
     </script>
 </body>

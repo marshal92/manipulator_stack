@@ -596,10 +596,10 @@ private:
   }
 
   void publish_current_command() {
-    // Safety watchdog: if button held > 10s without new message (e.g. lost connection), auto-stop
+    // Safety watchdog: both web UIs send keepalive every 100ms; stop quickly if stream stalls (>0.5s)
     auto elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - last_cmd_time_).count();
-    if (elapsed > 10.0 && (!is_twist_zero() || !is_jog_zero())) {
-      RCLCPP_WARN(this->get_logger(), "Teleop command timeout (10s). Stopping motion.");
+    if (elapsed > 0.5 && (!is_twist_zero() || !is_jog_zero())) {
+      RCLCPP_WARN(this->get_logger(), "Teleop command timeout (0.5s). Stopping motion.");
       current_twist_ = geometry_msgs::msg::Twist();
       current_jog_ = control_msgs::msg::JointJog();
       zero_msgs_sent_ = 0;
